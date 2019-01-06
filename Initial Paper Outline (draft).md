@@ -33,8 +33,9 @@ Although many works has been done on edge computing. However, there are still so
 	+ System overhead (include scheduling overhead, context switch overhead, ipi overhead, etc.): S
 	+ Worst case computation time: C<sub>i</sub>
 	+ Worst case scheduling latency: L<sub>i</sub>
-This system model is different from the classic EDF system model in two aspects:
-	+ classic EDF system model schedule tasks, so we have to convert packets to FWPs using some function which takes all packets in the run queue of a FWP as input value and outputs FWP deadline: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) -> FD<sub>i</sub>. A possible implementation of f<sub>1</sub>could be: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) = p2d(P<sub>0</sub>) Because according to assumption ii, the first packet in the run queue has the earliest deadline.
+
++This system model is different from the classic EDF system model in two aspects:
+	+ classic EDF system model schedule tasks, so we have to convert packets to FWPs using some function which takes all packets in the run queue of a FWP as input value and outputs FWP deadline: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) -> FD<sub>i</sub>. A possible implementation of f<sub>1</sub> could be: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) = p2d(P<sub>0</sub>). Because according to assumption ii, the first packet in the run queue has the earliest deadline.
 	+ classic EDF system model deals with periodic tasks? (not sure)
 
 ## Evaluation
