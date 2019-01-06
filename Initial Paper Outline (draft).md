@@ -1,0 +1,71 @@
+# Initial Paper Outline (draft)
+
+## Motivation
+
+### Problems with the current systems
++ Currently, edge computing requires a very high throughput as well as an optimal latency. However, most of the existing Edges OSes focus on improving the throughput while they pay less attention to the latency. Considering that one of the main reasons of using edge is to reduce the cost of sending packets across routes to data center or clouds. Optimizing the end to end latency of each packet is reasonable and necessary.
++ The other limit of current OSes is that they can only schedule tasks (threads). However, edge computing requires a more fine grained scheduling policy to deal with each packets. It could be another possible motivation of this paper.
+
+### Experiments to show the deficiency
++ To show the limit of the end to end latency and schedulability of existing OSes, we could generate several packet flows which is latency sensitive which means they have a relatively earlier deadline. (We should have more evidence to prove the limitation of current OSes.)
+
+## Story
+
+
+What is the arc of the story for the paper?
+How do you go from 
+
+- factors that people care about (speed, parallelism, costs, reliability) that are properly justified, to
+- an argument that existing systems aren't optimal for these factors (redundant with motivation), to
+- a value proposition for your work that it can improve systems for those factors, and finally to
+- a justification for your rough design that is simple and can be summarized in a small number of bullet points (e.g. four).
+
+This will get translated into the introduction, and will impact how you organize the description of the design, and the evaluation.
+It is important to make sure that your story is clear and as concise as possible.
+If you end up writing a ton of text, then make sure to go through it again, and simplify.
+
+As the development of Internet of Thing IoT, there is a growing demand of low latency packet processing. The emerge of Edge Computing makes it possible to meet this demand by providing an additional layer between IoT devices and mega cloud. Edge server is closer to IoT devices which will reduce the cost of sending packets across routes to data center or mega clouds and processing these packets in near real-time. 
+
+Current works on edge computing focus mainly on optimizing the throughput. However, since edge server has to process a large number of packets including some latency sensitive packets. It is still a big challenge to schedule these packets properly. 
+
+## Evaluation
+
+This is the section that is often the most difficult and will consume the majority of the space.
+You really want to get down to the details of what the systems being compared are, what are the relevant aspects of their setup, and what are the structures of any tables, and the x/y axis/different lines are for each graph.
+Getting to this level of detail is difficult, and requires planning and starting this outline 2 months before the deadline.
+The outline file should be formatted by default with a section for "story", one for "motivation", and one for "experiments".
+
+Create a subsection within "Experiments" for each of the classes of experiments.  
+There are often at least:
+
+- *Motivation* - why are current systems insufficient?
+- *Applications* - what higher-level applications can benefit from your system?
+- *Parameter studies* - what are the parameters that impact the benefit or the properties of your system?  
+    For example, things like the working set, rate of arrivals, size of requests, memory allocations, etc...  
+    These are often the easiest to figure out as they are very much intertwined with the technical details you've spent months working on!
+- *Microbenchmarks* - these study the atomic costs of the system with the intent of giving the reader an understanding of the underlying bounds of the system and compare, where possible, against comparable operations on existing systems.
+
+Create a subsub section within each of these for each experiment.
+
+Please start out with the motivation (as above) asking the question, "what do existing systems lack, or what is wrong with existing systems?", and from there create experiments that fairly *demonstrate those shortcomings*.  
+First and foremost, you're trying answer the question "what value does your system add", and focus on results that fairly showcase that.
+Only after you establish value, do you look at experiments to characterize all aspects of the system (where it is weak, where it is strong, workload characterizations, etc...).
+
+For each experiment, the first thing you should do is write down the question you're trying to answer with the experiment.
+Literally write it down.
+For example:
+
+**Question:** What is the maximum interference on high-priority tasks that systems can experience from IPIs?
+
+Then list the following:
+
+- System setups - which systems are you comparing, how are they set up?
+- Workloads - what is the workload on each system?
+- Graph/Table details - the axis and parameters of the graphs/tables.  
+    This is the hardest part, and will take a lot of thought.
+    The dominant question is how to best represent the phenomenon you're studying, and how to *best answer the question* (from above).
+    
+Once you have a first draft of all of this, get Gabe involved!
+If you have trouble putting any of this together, get Gabe involved, and talk to your peers!
+You'll iterate on this document quite a bit, so don't get too attached to anything.
+The story of a paper can change quite a bit as you get results, but you have to have an initial plan, and a goal.
