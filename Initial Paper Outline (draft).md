@@ -11,19 +11,6 @@
 
 ## Story
 
-
-What is the arc of the story for the paper?
-How do you go from 
-
-- factors that people care about (speed, parallelism, costs, reliability) that are properly justified, to
-- an argument that existing systems aren't optimal for these factors (redundant with motivation), to
-- a value proposition for your work that it can improve systems for those factors, and finally to
-- a justification for your rough design that is simple and can be summarized in a small number of bullet points (e.g. four).
-
-This will get translated into the introduction, and will impact how you organize the description of the design, and the evaluation.
-It is important to make sure that your story is clear and as concise as possible.
-If you end up writing a ton of text, then make sure to go through it again, and simplify.
-
 As the development of Internet of Thing IoT, there is a growing demand of low latency packet processing. The emerge of Edge Computing makes it possible to meet this demand by providing an additional layer between IoT devices and mega cloud. Edge server is closer to IoT devices which will reduce the cost of sending packets across routes to data center or mega clouds and processing these packets in near real-time. 
 
 Although many works has been done on edge computing. However, there are still some problems remain to be solved: 
@@ -39,12 +26,16 @@ Although many works has been done on edge computing. However, there are still so
 		+ p2d(p @ t0) < p2d(p @ t1) when t0 < t1. 
 		+ Other systems cannot have fwp chain per flow, so need multiple deadlines per fwp chain. (This could be another contribution.)
 + System model:
+
 	+ Packet rate: R
 	+ Packet deadline: PD<sub>i</sub>
 	+ FWP deadline: FD<sub>i</sub>
 	+ System overhead (include scheduling overhead, context switch overhead, ipi overhead, etc.): S
 	+ Worst case computation time: C<sub>i</sub>
 	+ Worst case scheduling latency: L<sub>i</sub>
+This system model is different from the classic EDF system model in two aspects:
+	+ classic EDF system model schedule tasks, so we have to convert packets to FWPs using some function which takes all packets in the run queue of a FWP as input value and outputs FWP deadline: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) -> FD<sub>i</sub>. A possible implementation of f<sub>1</sub>could be: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) = p2d(P<sub>0</sub>) Because according to assumption ii, the first packet in the run queue has the earliest deadline.
+	+ classic EDF system model deals with periodic tasks? (not sure)
 
 ## Evaluation
 
