@@ -26,7 +26,18 @@ If you end up writing a ton of text, then make sure to go through it again, and 
 
 As the development of Internet of Thing IoT, there is a growing demand of low latency packet processing. The emerge of Edge Computing makes it possible to meet this demand by providing an additional layer between IoT devices and mega cloud. Edge server is closer to IoT devices which will reduce the cost of sending packets across routes to data center or mega clouds and processing these packets in near real-time. 
 
-Current works on edge computing focus mainly on optimizing the throughput. However, since edge server has to process a large number of packets including some latency sensitive packets. It is still a big challenge to schedule these packets properly. 
+Although many works has been done on edge computing. However, there are still some problems remain to be solved: 
+
++ Since edge server has to process a large number of packets including some latency sensitive packets. It is a big challenge to meet the deadline of some **important tasks** while still maintain a high throughput.
++ Current OSes can only schedule tasks (or threads). However, edgeOS needs a more fine grained scheduling policy which can schedule packets instead of tasks (or threads).
+
+### Scheduling policy 
++ We have made two assumptions: 
+	1. All packets in a flow have the same deadline.
+		+ If a flow contain n packets P0, P1, … , Pn, with the deadline d. Then each packet  (P0, P1, … , Pn) has the same deadline d.
+	2. All same flows arrives at different time have same relative deadline
+		+ p2d(p @ t0) < p2d(p @ t1) when t0 < t1. 
+		+ Other systems cannot have fwp chain per flow, so need multiple deadlines per fwp chain. (This could be another contribution.)
 
 ## Evaluation
 
