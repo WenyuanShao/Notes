@@ -32,12 +32,19 @@ Although many works has been done on edge computing. However, there are still so
 + Current OSes can only schedule tasks (or threads). However, edgeOS needs a more fine grained scheduling policy which can schedule packets instead of tasks (or threads).
 
 ### Scheduling policy 
-+ We have made two assumptions: 
++ Two assumptions has been made:
 	1. All packets in a flow have the same deadline.
 		+ If a flow contain n packets P0, P1, … , Pn, with the deadline d. Then each packet  (P0, P1, … , Pn) has the same deadline d.
 	2. All same flows arrives at different time have same relative deadline
 		+ p2d(p @ t0) < p2d(p @ t1) when t0 < t1. 
 		+ Other systems cannot have fwp chain per flow, so need multiple deadlines per fwp chain. (This could be another contribution.)
++ System model:
+	+ Packet rate: R
+	+ Packet deadline: PD<sub>i</sub>
+	+ FWP deadline: FD<sub>i</sub>
+	+ System overhead (include scheduling overhead, context switch overhead, ipi overhead, etc.): S
+	+ Worst case computation time: C<sub>i</sub>
+	+ Worst case scheduling latency: L<sub>i</sub>
 
 ## Evaluation
 
