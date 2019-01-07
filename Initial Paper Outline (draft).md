@@ -21,12 +21,12 @@ Although many works has been done on edge computing. However, there are still so
 ### Scheduling policy 
 + Two assumptions has been made:
 	1. All packets in a flow have the same deadline.
-		+ If a flow contain n packets P0, P1, … , Pn, with the deadline d. Then each packet  (P0, P1, … , Pn) has the same deadline d.
+		+ If a flow contain n packets P<sub>0</sub>, P<sub>1</sub>, ... , P<sub>n</sub>, with the deadline d. Then each packet (P<sub>0</sub>, P<sub>1</sub>, ... , P<sub>n</sub>) has the same deadline d.
 	2. All same flows arrives at different time have same relative deadline
-		+ p2d(p @ t0) < p2d(p @ t1) when t0 < t1. 
+		+ p2d(p @ t<sub>0</sub>) < p2d(p @ t1) when t0 < t1. 
 		+ Other systems cannot have fwp chain per flow, so need multiple deadlines per fwp chain. (This could be another contribution.)
-+ System model:
 
++ System model:
 	+ Packet rate: R
 	+ Packet deadline: PD<sub>i</sub>
 	+ FWP deadline: FD<sub>i</sub>
@@ -34,9 +34,15 @@ Although many works has been done on edge computing. However, there are still so
 	+ Worst case computation time: C<sub>i</sub>
 	+ Worst case scheduling latency: L<sub>i</sub>
 
-+ This system model is different from the classic EDF system model in two aspects:
++ This system model is different from the classic EDF system model in following aspects according to Liu and James's paper:
 	1. classic EDF system model schedule tasks, so we have to convert packets to FWPs using some function which takes all packets in the run queue of a FWP as input value and outputs FWP deadline: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) -> FD<sub>i</sub>. A possible implementation of f<sub>1</sub> could be: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) = p2d(P<sub>0</sub>). Because according to assumption ii, the first packet in the run queue has the earliest deadline.
 	2. classic EDF system model deals with periodic tasks? (not sure)
+	3. tasks are independent which means current processing packet doesn't depend on the initialization or the completion of other tasks. (X)
+	4. each task must be completed before the next request comes. (not sure)
+
++ Schedulability analyze:
+	+ We can use the Theorem 7 of Liu and James's paper which says the EDF algorithm is feasible if and only if: (C<sub>1</sub>/T<sub>1</sub>)+(C<sub>2</sub>/T<sub>2</sub>)+ ... +(C<sub>1</sub>/T<sub>1</sub>) <= 1.
+	+ There is a gap between the analysis of our system and Liu and James's. We need to analyze the schedulability of each packet instead of each tasks. According to f<sub>1</sub>, DP<sub>i</sub> >= DP<sub>i</sub>. In other words, since the deadline of current FWP is the earliest deadline among the deadline of all packets in its run queue, if f<sub>i</sub> is schedulable all packets in f<sub>i</sub> are schedulable.
 
 ## Evaluation
 
