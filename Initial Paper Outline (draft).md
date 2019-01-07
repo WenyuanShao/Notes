@@ -42,9 +42,19 @@ Although many works has been done on edge computing. However, there are still so
 
 + Schedulability analyze:
 	+ We can use the Theorem 7 of Liu and James's paper which says the EDF algorithm is feasible if and only if: (C<sub>1</sub>/T<sub>1</sub>)+(C<sub>2</sub>/T<sub>2</sub>)+ ... +(C<sub>1</sub>/T<sub>1</sub>) <= 1.
-	+ There is a gap between the analysis of our system and Liu and James's. We need to analyze the schedulability of each packet instead of each tasks. According to f<sub>1</sub>, DP<sub>i</sub> >= DP<sub>i</sub>. In other words, since the deadline of current FWP is the earliest deadline among the deadline of all packets in its run queue, if f<sub>i</sub> is schedulable all packets in f<sub>i</sub> are schedulable.
+	+ There is a gap between the analysis of our system and Liu and James's theorem. We need to analyze the schedulability of each packet instead of each tasks. According to f<sub>1</sub>, DP<sub>i</sub> >= DP<sub>i</sub>. In other words, since the deadline of current FWP is the earliest deadline among the deadline of all packets in its run queue, if f<sub>i</sub> is schedulable all packets in f<sub>i</sub> are schedulable.
 
 ## Evaluation
++ Infrastructure: two Dell R740 servers connected to each other through port enp59s0f0 (10G) (needs detailed information about the servers). Do we need connect more ports to create different packet flow comes from different ports. (?)
+
+### Performance evaluation:
++ Schedualbility test:
+	+ Generate different packet flows which push the utility of the system and calculate the packet flows which meet their deadline.
+	+ X axis packet rate (?), Y axis percent of the packets which meet its deadline.
+
++ Latency and throughput test:
+
+### Comparison cases
 
 This is the section that is often the most difficult and will consume the majority of the space.
 You really want to get down to the details of what the systems being compared are, what are the relevant aspects of their setup, and what are the structures of any tables, and the x/y axis/different lines are for each graph.
