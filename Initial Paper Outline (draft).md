@@ -41,8 +41,10 @@ Although many works has been done on edge computing. However, there are still so
 	4. each task must be completed before the next request comes. (not sure)
 
 + Schedulability analyze:
-	+ We can use the Theorem 7 of Liu and James's paper which says the EDF algorithm is feasible if and only if: (C<sub>1</sub>/T<sub>1</sub>)+(C<sub>2</sub>/T<sub>2</sub>)+ ... +(C<sub>1</sub>/T<sub>1</sub>) <= 1.
-	+ There is a gap between the analysis of our system and Liu and James's theorem. We need to analyze the schedulability of each packet instead of each tasks. According to f<sub>1</sub>, DP<sub>i</sub> >= DP<sub>i</sub>. In other words, since the deadline of current FWP is the earliest deadline among the deadline of all packets in its run queue, if f<sub>i</sub> is schedulable all packets in f<sub>i</sub> are schedulable.
+	+ We can use the Theorem 7 of Liu and James's paper which says the EDF algorithm is feasible if and only if: (C<sub>1</sub>/T<sub>1</sub>)+(C<sub>2</sub>/T<sub>2</sub>)+ ... +(C<sub>1</sub>/T<sub>1</sub>) <= 1. However, there are several differences between their system model and the system model of ours.
+		+ In our system model, the FWPs don't happen periodically. The deadline and packet rate -> period.
+		+ There are not guarantee that each FWP must be completed before the next request of it comes (which is our system is the packet or cluster of packets aren't done processing when the next packet or cluster of packet comes). (?) 
+		+ The last gap is that we need to analyze the schedulability of each packet instead of each tasks. According to f<sub>1</sub>, DP<sub>i</sub> >= DP<sub>i</sub>. In other words, since the deadline of current FWP is the earliest deadline among the deadline of all packets in its run queue, if f<sub>i</sub> is schedulable all packets in f<sub>i</sub> are schedulable.
 
 ## Evaluation
 + Infrastructure: two Dell R740 servers connected to each other through port enp59s0f0 (10G) (needs detailed information about the servers). Do we need connect more ports to create different packet flow comes from different ports. (?)
