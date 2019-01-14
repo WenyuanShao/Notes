@@ -3,20 +3,21 @@
 ## Motivation
 
 ### Problems with the current systems
-+ Currently, edge computing requires a very high throughput as well as an optimal latency. However, most of the existing Edges OSes focus on improving the throughput while they pay less attention to the latency. Considering that one of the main reasons of using edge is to reduce the cost of sending packets across routes to data center or clouds. Optimizing the end to end latency of each packet is reasonable and necessary.
++ Currently, edge computing requires a very high throughput as well as an optimal latency. However, most of the existing Edges OSes focus on improving the throughput while they pay less attention on the latency. Considering that one of the main reasons of using edge is to reduce the cost of sending packets across routes to data center or clouds. Optimizing the end to end latency of each packet is reasonable and necessary.
 + The other limit of current OSes is that they can only schedule tasks (threads). However, edge computing requires a more fine grained scheduling policy to deal with each packets. It could be another possible motivation of this paper.
 
 ### Experiments to show the deficiency
-+ To show the limit of the end to end latency and schedulability of existing OSes, we could generate several packet flows which is latency sensitive which means they have a relatively earlier deadline. (We should have more evidence to prove the limitation of current OSes.)
++ To show the limit of the end to end latency and schedulability of existing OSes, we could generate packet flows which is latency sensitive and press the utility by increase the packet rate. (We should have more evidence to prove the limitation of current OSes.)
 
 ## Story
 
-As the development of Internet of Thing IoT, there is a growing demand of low latency packet processing. The emerge of Edge Computing makes it possible to meet this demand by providing an additional layer between IoT devices and mega cloud. Edge server is closer to IoT devices which will reduce the cost of sending packets across routes to data center or mega clouds and processing these packets in near real-time. 
+As the development of Internet of Thing (IoT), there is a growing demand of low latency packet processing. The emerge of Edge Computing makes it possible to meet this demand by providing an additional layer between IoT devices and mega cloud. Edge servers are optimal because they are closer to IoT devices which will reduce the cost of sending packets across routes to data center or mega clouds It makes it possible to process these packets in near real-time. 
 
 Although many works has been done on edge computing. However, there are still some problems remain to be solved: 
 
 + Since edge server has to process a large number of packets including some latency sensitive packets. It is a big challenge to meet the deadline of some **important tasks** while still maintain a high throughput.
-+ Current OSes can only schedule tasks (or threads). However, edgeOS needs a more fine grained scheduling policy which can schedule packets instead of tasks (or threads).
++ Current OSes can only schedule tasks (or threads). However, edgeOS needs a more fine grained scheduling policy which can schedule packets (or cluster of packets) instead of tasks (or threads).
++ ...
 
 ### Scheduling policy 
 + Two assumptions has been made:
@@ -33,7 +34,7 @@ Although many works has been done on edge computing. However, there are still so
 	+ System overhead (include scheduling overhead, context switch overhead, ipi overhead, etc.): S
 	+ Worst case computation time: C<sub>i</sub>
 	+ Worst case scheduling latency: L<sub>i</sub>
-	+ Period 
+	+ Period: T<sub>i</sub>
 
 + This system model is different from the classic EDF system model in following aspects according to Liu and James's paper:
 	1. classic EDF system model schedule tasks, so we have to convert packets to FWPs using some function which takes all packets in the run queue of a FWP as input value and outputs FWP deadline: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) -> FD<sub>i</sub>. A possible implementation of f<sub>1</sub> could be: f<sub>1</sub>(P<sub>0</sub>, ... , P<sub>n</sub>) = p2d(P<sub>0</sub>). Because according to assumption ii, the first packet in the run queue has the earliest deadline.
