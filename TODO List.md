@@ -4,7 +4,7 @@
 - We do have a flow table for different flows now.
 	- Current using flow mapping:
 		1. a flow  to chain mapping, simple mapping using (client port - offset) to get the correspond fwp ID. (hashtable needed?)
-		2. We need a more SDN like flow table:
+		2. We need a flow table contains more information:
 			i.  still using client port to map to the correspond fwp.
 			ii. The flow table is an array and each node is a structure contains information such as: ip address, DDL, correspond fwp ID, *offset* (the length of the DDLs which determines one packet would be allowed to copy to fwp ring buffer or not) **the size of offset needs to be determined**. 
 
