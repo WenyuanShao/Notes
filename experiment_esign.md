@@ -1,6 +1,6 @@
 # experiment design
 
-## Parameter studies: (include hacks， trade off...)
+## Parameter studies:
 + We can use dummy NFs in parameter study tests. (NFs with just while loops which makes the NF spin for a while)
 + We can allocate a chain of n NFs which are forked from the same template, like [dummy NF]1 -> [dummy NF]2 -> [dummy NF]3.
 + We can adjust the spin time of each NF according to the index of the NF.
@@ -20,26 +20,42 @@
 	+ Use a TCP echoserver benchmark or memcached benchmark. Since packet needs to be passed through some protocols using a TCP or UDP benchmark should be reasonable.
 
 + Aiming graphs:
-	1. One comparison graph: which compares EOS scheduling with end to end deadline against using split deadline. 
-		+ x-axis: different task set; (different in the WCET of each task for example WCET of NF1 > WCET of NF2 vs WCET of NF1 > WCET of NF2) 
-		+ y-axis: latency and throughput.
-	2. One parameter study graph:
+	1. Comparison graph: (compares EOS configured using heap and bitmap)
+		+ x-axis: utilization of the whole system
+		+ y-axis: percent of the flows which meet its deadline and throughput
+		+ Two lines of percent of the tasks meet its deadline for different scheduling algorithm. And two lines for throughput.
+	2. Parameter study graph:
 		+ "offset" study graph: 
 			+ x-axis: different offset value;
-			+ y-axis: latency and throughput.
+			+ y-axis: percant of the flows which meet its deadline.
+			+ Multiple lines for different utilization of the system (low (0.1), around (0.5), high	(> 0.8))
 
 
-## Real case experiments: (could be one or multiple types of NFs, length of the chain is greater 1)
+## Real case experiments:
 + Click related applications, for example, fire wall, bridge, etc.
 + Applications EOS already have, TLS, ARMNN, memcached, echoserver.
-+ Other applications (quadcopter)? 
 
-+ Comparison cases:
-	1。 compare against EOS with different configuration
-	2. compare against LINUX configured using EDF
++ MQTT application:
+	+ chain structure: firewall -> MQTT ->firewall
+	+ compare against EOS with different configuration and LINUX
+	+ Aiming Graph:
+		+ x-axis: utilization of the whole system
+		+ y-axis: percent of the tasks which meet its deadline
+		+ Multiple lines for different scheduling policy and system configuration.
 
-+ Aiming graphs:
-	1. Comparison graph: which compares EOS against EOS with other configuration and LINUX:
-		+ x-axis: clients number;
-		+ y-axis: latency and throughput.
++ Distributed Cache:
+	+ chain structure: firewall -> MEMCACHED -> firewall
+	+ Compare against EOS with different configuration and LINUX.
+	+ Aiming Graph:
+		+ x-axis: utilization of the whole system
+		+ y-axis: percent of the tasks which meets its deadline
+		+ Multiple lines for different comparison cases
+
++ Long NF chain:
+	+ chain structure: a longer chain (5-15).
+	+ No merges considered.
+	+ Aiming graph:
+		+ x-axis: Lenght of the chain.
+		+ y-axis: percent of the flows meet its deadline.
+		+ Multiple lines for different overall utilization.
 
