@@ -59,3 +59,12 @@
 		+ y-axis: percent of the flows meet its deadline.
 		+ Multiple lines for different overall utilization.
 
+## Other problems may concern:
++ Do we need a timer in the scheduler, which make it possible for the scheduler to block a NF if it has passed its deadline;
++ Also related to the timer. How can we calculate the tasks which missed its deadline?
+	+ Do it on the client side:
+		1. did not find a good benchmark which can track the deadline of each packets. 
+		2. Even we manage to add it in the benchmark, considering the benchmark is running on LINUX and the overhead and unpredictable of packet transferring, it is still very hard to say we can calculate the packets which missed its deadline correctly
+	+ Do it on the server side:
+		1. We can set a timer for every NF.
+		2. Or simply compare the current system time with current running thread. (In worst case, it will take a timer tick for the scheduler to know a NF missed its deadline)
