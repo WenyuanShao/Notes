@@ -2,20 +2,21 @@
 
 #### Utilization: 
 
-Utilization is calculated by calculating the scheduler idle time. Utilization could be affected by many parameters such as WCET, packet rate, flow number. It is relatively hard to modify WCET and packet rate. As a result, I plan to modify the utilization by changing the number of flows needs  to be processed on the same core.
+Utilization is calculated by calculating the scheduler idle time. Utilization could be affected by many parameters such as WCET, packet rate, flow number. It is relatively hard to modify WCET and packet rate. As a result, I plan to modify the utilization by changing the number of flows needs to be processed on the same core.
 
-#### % of deadline met (or missed) :
+#### % of deadline met (or missed):
 
 + % of deadline met might be better than % of the deadline missed.
 + The % of the deadline met is going to be calculated on the client side. The deadline of the same flow on the server side should be smaller than the deadline of it on the client side. According to my current experiments, DL<sub>client</sub> = 2 * DL<sub>server</sub> could be reasonable.
-+ **How can we define the % of deadlines met (or missed).  (Still thinking)** If one packet in the flow missed its deadline, does this mean that any other packets came after the current packet will miss its deadline. O run another word, will it affect future packets in the same flow  
++ **How can we define the % of deadlines met (or missed).  (Still thinking)** If one packet in the flow missed its deadline, does this mean that any other packets came after the current packet will miss its deadline. Or in another word, will it affect future packets in the same flow  
++ **Not very easy to tell % of deadline meet will show the advantage of our system. Instead, we might want to use % lateness. (?) **
 
 #### Latency:
 
 + The latency could be get from the client side.
 + Since there are many flow which have different deadline, packet rate. How can we plot them in the same graph.
 + As a result, latency make very little sense to me. Plot latency might not be a very good idea
-+ But there are some other informations we can get from the latency, such as we can get the % of the packets which missed its deadline by tracking the latency.
++ But there are some other information we can get from the latency, such as we can get the % of the packets which missed its deadline by tracking the latency.
 
 #### Throughput:
 
@@ -34,8 +35,8 @@ Currently, we can support different OFFSET for different flows. Considering we c
 + Use TCP/echoserver and let multiple flows goes into one fwp.
 	+ The echo will let the NF SPIN for a while to simulate some process overhead.
 	+ The SPIN time will also be used as the base of partition deadline.
-	+ Length of the chain is 2 and the WCET<sub>NF<sub>1</sub></sub> = 4*WCET<sub>NF<sub>2</sub></sub> .
-	+ Get throughput and % of deadline missed from cleint side. 
+	+ Length of the chain is 2 with WCET<sub>NF<sub>1</sub></sub> = 4*WCET<sub>NF<sub>2</sub></sub> .
+	+ Get throughput and % of deadline missed from client side. 
 	+ We will change the flow number to get different utilization of the system.
 	+ If we TCP we need to have multiple flows goes into one NF chain to show the affect of _OFFSET_.
 	
@@ -52,7 +53,7 @@ Currently, we can support different OFFSET for different flows. Considering we c
 + Our system tend to have less packets which missed its deadline since
 
 	+ First, we use EDF which will have a better schedulability especially when task<sub>1</sub> has a very early overall deadline while the first subtask of it takes most of execution time.
-	+ We have less system overhead and scheduling over head than LINUX.
+	+ We have less system overhead and scheduling overhead than LINUX.
 
 **Aiming graph:**
 
@@ -62,7 +63,7 @@ Using utilization as x-axis maybe reasonable. However, since there are many para
 
 **Graph1:**
 
-+ X-axis: utilization (include utilization greater than one)
++ X-axis: **flow number**
 
 + Y-axis-left: throughput. 
 
@@ -73,12 +74,23 @@ Using utilization as x-axis maybe reasonable. However, since there are many para
 **Graph2:**
 
 + X-axis: _OFFSET_ from _0_ to _MIN(flowdeadline)_
-
 + Y-axis-left: throughput.
-
 + Y-axis-right: % of deadline met.
-
 + We can have 2 lines for the throughput and 2 for deadline met. These two lines represent different utilization one for utilization smaller than 1and the other one is greater than 1.
+
+**Graph3**
+
++ X-axis: chain length
++ Y-axis-left: throughput.
++ Y-axis-right: total lateness
++ We need another experiment for different length of chain. We can have three lines each for EOS, RR EOS, LINUX
+
+**Graph4 (maybe?)**
+
+This is a more basic performance experiment. More like a microbenchmark
+
++ X-axis: thread number
++ Y-axis: scheduling latency / scheduling overhead
 
 ## Real case experiments:
 
@@ -120,7 +132,7 @@ Instead of using utilization as x-axis, using number of flows (clients / MQTT br
 
 **Aiming Graph:**
 
-+ X-axis: utilization. 
++ X-axis: flow number.
 
 + Y-axis-left: throughput
 
@@ -128,20 +140,19 @@ Instead of using utilization as x-axis, using number of flows (clients / MQTT br
 
 + Three lines for the throughput of EOS, RR EOS and LINUX. The other three are for the % of deadline met.
 
-### Long NF chain: (still thinking)
+### Edge Inference:
 
-**Story:** This experiment is a more realistic application which include a longer chain and higher computation requirement. One flow is going to go through _tcp stack, firewall, inference, firewall, etc_. 
+**Story:** It would be very reasonable to put some inference on Edge servers. Moreover, _firewall -> inference -> firewall_ is a very reasonable chain structure.
 
 **Experiment design**
 
-+ chain structure: a longer chain (5-15).
-+ **No merges considered**, considering the chain affect after `MMA` decide do update the deadline of a `fwp chain` to a smaller one when it decide to copy a packet from a thread with much earlier deadline. This will make the _OFFSET_ not working. 
-+ On LINUX, we will have a similar structure which includes multiple processes. Each of these processes are representing a NF. For click NFs, we just need one click instance running in a process on LINUX.
++ chain structure: _UDP related NF, firewall, inference, firewall_
++ Input data can only be fit in three three packets so these three packets will be batched in the ring. 
 
 **Aiming graph:**	
 
-+ x-axis: utilization.
++ x-axis: flow number.
 	
 + y-axis: % of the flows meet its deadline.
 	
-+ Multiple lines for different chain number. **(?)**
++ Multiple lines for EOS, RR EOS and LINUX
