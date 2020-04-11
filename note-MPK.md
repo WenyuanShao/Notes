@@ -38,6 +38,11 @@ Assume that we have a IPC from component A->B.
 	
 	|Caller and callee both have empty shared queue|there is no in-flight IPC, kernel should verify previous completed IPCs which distributed stored elsewhere.|
 
+|左对齐|居中对齐|右对齐|
+|:-    |:------:|-:|
+|左对齐列|居中对齐列|右对齐列|
+|1|2|3|
+
 # call gate design
 + The correctness of the IPC is ensured by linker and loader.
 + will call the function to add entries into the syn-queue before IPC and set the complete in the entry after return.
