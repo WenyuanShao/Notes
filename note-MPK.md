@@ -20,23 +20,23 @@ Assume that we have a IPC from component A->B.
 
 + Kernel will check the in-flight user-level IPCs by look into the syn-structure of both caller and callee. The possible cases are as bellow:
 	
-	｜Possible condition | resolve｜
+	|Possible condition|resolve|
 	
-	｜:-: | :-:｜
+	|:-:|:-:|
 	
-	｜Caller/callee writes messes into shared memory. | Illegal, kernel will detect the error and which component is faulting｜
+	|Caller/callee writes messes into shared memory.|Illegal, kernel will detect the error and which component is faulting|
 	
-	｜Caller starts the IPC while callee didn't receive. | legal, push into invstk.｜
+	|Caller starts the IPC while callee didn't receive.|legal, push into invstk|
 	
-	｜Caller writes info in shared memory and get preempted before calling *wrpkru* | kernel will push it into invstk and deal with it next time calls into kernel.｜
+	|Caller writes info in shared memory and get preempted before calling *wrpkru*|kernel will push it into invstk and deal with it next time calls into kernel.|
 	
-	｜Callee received IPC while no records on caller side |     Illegal, callee could fake a IPC record, caller                                                                                  could delete a IPC record.｜
+	|Callee received IPC while no records on caller side| Illegal, callee could fake a IPC record, caller                                                                                  could delete a IPC record.|
 	
-	｜Caller starts an IPC but callee writes mess into shared memory | Illegal, kernel will detect the error and which component is faulting｜
+	|Caller starts an IPC but callee writes mess into shared memory|Illegal, kernel will detect the error and which component is faulting|
 	
-	｜Caller and callee both have legal records | kernel needs to verify if this IPC is legal and current thread is in a in-flight IPC｜
+	|Caller and callee both have legal records|kernel needs to verify if this IPC is legal and current thread is in a in-flight IPC|
 	
-	｜Caller and callee both have empty shared queue | there is no in-flight IPC, kernel should verify previous completed IPCs which distributed stored elsewhere.｜
+	|Caller and callee both have empty shared queue|there is no in-flight IPC, kernel should verify previous completed IPCs which distributed stored elsewhere.|
 
 # call gate design
 + The correctness of the IPC is ensured by linker and loader.
