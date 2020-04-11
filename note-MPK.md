@@ -22,7 +22,7 @@ Assume that we have a IPC from component A->B.
 	
 	|Possible condition|resolve|
 	
-	|:-:|:-:|
+	|:------:|:------:|
 	
 	|Caller/callee writes messes into shared memory.|Illegal, kernel will detect the error and which component is faulting|
 	
