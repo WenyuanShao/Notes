@@ -30,7 +30,6 @@ We use iDrac which is a separate power control firmware of Dell's server to rebo
 4. In the menu there's a "connect virtual device", click on it and upload Composite.iso to virtual CD.
 5. In boot menu, choose warm reboot. (Usually it will take about 5 minutes)
 6. You should see output on both virtual console (VGA output) and minicom (serial output)
-7. 
 
 ### Additional git repos and articles
 
