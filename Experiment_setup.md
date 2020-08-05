@@ -30,3 +30,8 @@ We use iDrac which is a separate power control firmware of Dell's server to rebo
 4. In the menu there's a "connect virtual device", click on it and upload Composite.iso to virtual CD.
 5. In boot menu, choose warm reboot. (Usually it will take about 5 minutes)
 6. You should see output on both virtual console (VGA output) and minicom (serial output)
+7. 
+
+### Additional git repos and articles
+
+You can refer to [this articel](https://github.com/gwsystems/composite/blob/ppos/doc/baremetal.md) for guidance of how to make an iso file of Composite. I suggest you starting with some simple benchmarks of normal Composite. The EdgeOS repository may be missing several submodules. But if you what to get more ideas about what we are doing, this [repo](https://github.com/WenyuanShao/eos/tree/eos) will give you more information. Moreover, you can find the experiment setups [here](https://github.com/WenyuanShao/Notes/blob/master/experiment_design_2nd.md).

@@ -27,100 +27,160 @@ Utilization is calculated by calculating the scheduler idle time. Utilization co
 
 Currently, we can support different OFFSET for different flows. Considering we cannot show all of the different OFFSETs, choosing a static OFFSET might be a better choice. The OFFSET will be changed among a interval of _[0, MIN(flowdeadline)]_. 
 
+#### Bin size:
+
+For bitmap edf, every bit in the bitmap represents a period of time which the deadline of one nf could be in. Adjusting bin size might have some influence on the performance since it will affect the reclaim the bits. The bin size should closely related to the size of a timer tick. As a result, to better understand this, I think we need to have a parameter study for bin size and even different length of the timer tick.
+
 # experiment design
 
-### parameter study:
+### Microbenchmark
 
-**experiment design:**
-+ Use TCP/echoserver and let multiple flows goes into one fwp.
-	+ The echo will let the NF SPIN for a while to simulate some process overhead.
-	+ The SPIN time will also be used as the base of partition deadline.
-	+ Length of the chain is 2 with WCET<sub>NF<sub>1</sub></sub> = 4*WCET<sub>NF<sub>2</sub></sub> .
-	+ Get throughput and % of deadline missed from client side. 
-	+ We will change the flow number to get different utilization of the system.
-	+ If we TCP we need to have multiple flows goes into one NF chain to show the affect of _OFFSET_.
-	
-+ Use UDP echoserver?
+There should be a microbenchmark for different scheduling algorithms to prove bitmap base scheduling is sufficient.
 
-**expected result:**
+**Experiment design:**
 
-+ When utilization is low, our system tend to have similar throughput and % of deadline missed as LINUX and RR EOS.
++ This microbenchmark should be done above Linux.
 
-+ When utilization approaching to 1, our system tend to have better throughput and % of deadline missed than RR EOS. RR EOS is tend to have better result of both parameters than LINUX.
++ We are going to evaluate retree, bitmap edf, bitmap fprr, three types of scheduling algorithms.
 
-+ Our system tend to have better throughput since _OFFSET_ will reduce content switch overhead. (When compare to RR EOS)
++ We will measure both insert and remove overheads in the microbenchmark.
 
-+ Our system tend to have less packets which missed its deadline since
++ For rbtree, the microbenchmark should flush cache between every insert and remove operation. e.g.
 
-	+ First, we use EDF which will have a better schedulability especially when task<sub>1</sub> has a very early overall deadline while the first subtask of it takes most of execution time.
-	+ We have less system overhead and scheduling overhead than LINUX.
+  ```
+  flush_cache();
+  rbtree_remove();
+  flush_cache();
+  rb_tree_insert();
+  ```
+
++ The expected results are tail of the overheads and standard deviation of the results.
 
 **Aiming graph:**
 
-There's two graph for the parameter study. The purpose of this graph is to show how the _utilization_ and _OFFSET_ affect the throughput and % of deadline missing.
+**Graph 1 (histogram):**
 
-Using utilization as x-axis maybe reasonable. However, since there are many parameters can affect utilization (eg. SPIN time, flow number, packet rate which will affect period, etc). I plan to only control the utilization by changing the number of flows.
++ X-axis: different scheduling algorithms + thread number (10, 100, 1000). There in total will be 9 bars.
 
-**Graph1:**
++ Y-axis: latency (cycles).
++ Each bar shows the average latency, a showed bar shows the 99% tail and a small interval inside shows the standard deviation.
 
-+ X-axis: **flow number**
+### parameter study:
 
-+ Y-axis-left: throughput. 
+**Basic experiment design:**
 
-+ Y-axis-right: % of deadline met.
+The purpose of parameter study is to understand (or explain) the pessimisms we've added in the system and some other parameters which might have influences on system performance.
 
-+ There are six lines each for RR EOS, LINUX and EOS with _OFFSET_ equals _0_. Three of them are for throughput and the others are for deadline meet (or miss) rate. I prefer using the percent of deadline meet.
++ Use UDP echoserver.
+	+ The udp echo server will SPIN for certain amount of time.
+	+ We will change SPIN time to achieve simulate different system utilization.
+	+ Get throughput and % of deadline missed on the client side. 
+	
 
-**Graph2:**
+**expected result:**
 
-+ X-axis: _OFFSET_ from _0_ to _MIN(flowdeadline)_
-+ Y-axis-left: throughput.
-+ Y-axis-right: % of deadline met.
-+ We can have 2 lines for the throughput and 2 for deadline met. These two lines represent different utilization one for utilization smaller than 1and the other one is greater than 1.
++ When utilization is low, our system tend to have similar throughput and % of deadline missed as LINUX and fprr EOS.
 
-**Graph3**
++ When utilization approaching to 1, our system tend to have better throughput and % of deadline missed than fprr EOS. fprr EOS is tend to have better result of both parameters than LINUX.
 
-+ X-axis: chain length
-+ Y-axis-left: throughput.
-+ Y-axis-right: total lateness
-+ We need another experiment for different length of chain. We can have three lines each for EOS, RR EOS, LINUX
++ **We hope to see some evidence which shows the bounded lateness of the system.**
 
-**Graph4 (maybe?)**
 
-This is a more basic performance experiment. More like a microbenchmark
+**Aiming graph:**
 
-+ X-axis: thread number
-+ Y-axis: scheduling latency / scheduling overhead
+The parameters we are going to evaluate includes: chain length, offset size, bitmap bin size (smaller than a timer tick or greater than a timer tick). 
+
+Using utilization as x-axis maybe reasonable. However, since there are many parameters can affect utilization (eg. SPIN time, flow number, packet rate which will affect period, etc). I plan to only control the utilization by modifying the SPIN time of every nf.
+
+We also need a Linux compare case, we use a multiprocess echoserver as a Linux compare case. For parameter study of chain length greater than 1, we have Linux echo server send packets to other processes through a pipeline. 
+
+**Graph1: (utilization study)**
+
+Experiment details: 
+
++ Every flow has a different deadline. Clients are aware of the deadlines by knowing the server port which it communicate with;
++ The chain length is 1; 50 fwp (chain)s per core; the related deadline of these 50 fwps are from 20ms to 70ms.
++ Each udp echo server will spin for a short time to simulate the overhead of an application.
++ Modify utilizations by modifying the execution time.
++ The flows have a smaller deadline tend to have a smaller execution time and smaller period and vice versa. 
++ *(Not Sure)* The utilization is balanced across flows. Which means flow with smaller relative deadline has the same utilization as flow has greater deadline. (Having both smaller sending rate and smaller execution time.) **correspond to graph details 3**
+
+Graph details:
+
+1. X-axis: utilization.
+2. Y-axis: 99% tail latency of the client which has the smallest deadline.
+3. Have 3 lines each for Linux, EOS with fprr and EOS with edf.
+   + Can have multiple lines for different utilization distribution. (For example, lowest deadline flow requires a  higher utilization, or other flows having greater utilization demand)
+
+**Graph2: (pessimism study)**
+
+Experiment detail:
+
+This graph is going to show how's the pessimism we've added affect the tail latencies of all clients. The parameters which will add pessimisms include: OFFSET, timer tick and bin size.
+
+Graph details:
+
+Use histogram. (Not sure, but I think it might be a good choice if we want to combine all three causes of pessimism in one graph)
+
++ X-axis: different tests (e.g. offset 100us utilization 85%, etc)
+
++ Y-axis: 99% tail latency
+
++ Detailed tests:
+
+  | Tests                                                        |
+  | ------------------------------------------------------------ |
+  | Offset: 0, utilization: 90%, timer tick: 500us, bin size = timer tick |
+  | Offset: 250us (half timer tick), utilization: 90%,timer tick: 500us, bin size = timer tick (I think half a timer tick offset is enough to show the downside of having a large offset) |
+  | Offset: 10us (just dealing with the client batching), utilization: 90%, timer tick: 500us, bin size = timer tick |
+  | Timer tick: 250us, utilization: 90%, offset: 10us (I think a very small offset is enough), bin size = timer tick |
+  | Timer tick: 500us, utilization: 90%, offset: 10us, bin size = timer tick |
+  | Timer tick: 750us, utilization: 90%, offset: 10us ,bin size = timer tick |
+  | Timer tick: 500us, utilization: 90%, offset: 10us, bin size = 1/4*timer tick |
+  | Timer tick: 500us, utilization: 90%, offset: 10us, bin size = 1/2*timer tick |
+  | Timer tick: 500us, utilization: 90%, offset: 10us, bin size = 1.5*timer tick |
+
+**Graph3: (chain length)**
+
+Experiment details:
+
++ There's only one type of fwp chain.
++ The total utilization remains unchanged when adjust the chain length. (control variable)
++ Starts with evenly distributed execution times which means every chain node has the same spin time.
++ Then try head of the chain have greater execution time. (Not sure, maybe will show better results)
++ The linux compare case will have separate processes as NFs and use pipe for interprocess communication.
+
+Graph details:
+
++ X-axis: chain length: 1, 2, 4, 8; per core chain number: 64, 32, 16, 8
++ Y-axis: 99% tail latency
++ Have multiple lines for Linux, EOS with fprr and EOS with edf each having different total utilization (80%, 90%)
 
 ## Real case experiments:
 
 ### MQTT application:
 
-**Story**: Edge might be a good place running a MQTT server.
+**Story**: Edge might be a good place running a MQTT server...
 
 **Experiment design:**
 
-+ chain structure: firewall -> MQTT ->firewall
-
-+ On LINUX we have click objects and MQTT on different processes and connect them follow the same structure as EOS. 
-
-+ compare against RR EOS and LINUX
-
-+ There are multiple flows goes into one NF chain which means there are multiple MQTT brokers connect to one MQTT publisher.
++ compare against fprr EOS and LINUX
++ There are two flows goes into one NF chain which means there are multiple MQTT brokers connect to one MQTT publisher.
++ One subscriber publish the message to server. Server will publish the message to every subscriber which subscribe to this channel.
++ We benchmark the performance on the subscriber which sends the publication to the server.
++ The Linux compare case is multithreaded, which will have less protection.
 
 **Aiming Graph:** 
 
-Instead of using utilization as x-axis, using number of flows (clients / MQTT brokers) might be a better idea. Since, utilization could be affected by multiple parameters. For example, WCET, flow number, packet rate (period). What we can control in this experiment is flow number, utilization is the result of changing the number of flows.
+We are going to push the utilization of the server by adding more clients. 
 
-+ X-axis: number of flows. 
++ X-axis: number of client flows 
 	
-+ Y-axis-left :throughput.
++ Y-axis: 99% tail latency.
 	
-+ Y-axis-right: percent of the tasks which meet its deadline.
++ Three lines for the throughput of EOS, fprr EOS and LINUX.
 	
-+ Three lines for the throughput of EOS, RR EOS and LINUX. The other three are for the % of deadline met.
-	
-### Distributed Cache:
+### ~~Distributed Cache (removed)~~:
 
 **Story**: We can built a distributed data-store for location tracking of _IOT_ devices.
 	
@@ -132,27 +192,37 @@ Instead of using utilization as x-axis, using number of flows (clients / MQTT br
 
 **Aiming Graph:**
 
-+ X-axis: flow number.
++ X-axis: number of client flows 
 
-+ Y-axis-left: throughput
++ Y-axis: 99% tail latency.
 
-+ Y-axis-right: % of the tasks which meets its deadline
-
-+ Three lines for the throughput of EOS, RR EOS and LINUX. The other three are for the % of deadline met.
++ Three lines for the throughput of EOS, fprr EOS and LINUX. 
 
 ### Edge Inference:
 
-**Story:** It would be very reasonable to put some inference on Edge servers. Moreover, _firewall -> inference -> firewall_ is a very reasonable chain structure.
+**Experiment design**
+
++ Input data can only be fit in three three packets so these three packets will be batched in the ring. Which means the deadline of these three packets equals the deadline of the last packet.
+
+**Aiming graph:**
+
++ x-axis: number of client flows
++ y-axis: 99% tail latency
++ Multiple lines for edf EOS, fprr EOS and LINUX
+
+### EKF
 
 **Experiment design**
 
-+ chain structure: _UDP related NF, firewall, inference, firewall_
-+ Input data can only be fit in three three packets so these three packets will be batched in the ring. 
++ I think this application is a good place to have some chain structure, since ekf computation will not dominates the total overhead.
++ Chain structure: firewall, UDP related NF, ekf, firewall
 
-**Aiming graph:**	
++ Every sensor reading can fit into one packet.
++ Use udp to communicate.
++ The Linux compare case is a multiprocess udp server.
 
-+ x-axis: flow number.
-	
-+ y-axis: % of the flows meet its deadline.
-	
-+ Multiple lines for EOS, RR EOS and LINUX
+**Aiming graph:**
+
+- x-axis: number of client flows
+- y-axis: 99% tail latency
+- Multiple lines for edf EOS, fprr EOS and LINUX
