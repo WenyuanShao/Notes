@@ -5,7 +5,7 @@
    Create a arp.sh file in home as:
 
    ```
-   #!/bine/bash
+   #!/bin/bash
    sudo ifconfig enp59s0f0 10.10.1.1
    sudo ifconfig enp59s0f0 netmask 255.255.255.0
    sudo arp -s 10.10.1.2 f8:f2:1e:11:42:08
