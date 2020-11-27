@@ -16,7 +16,7 @@ wrpkru(unsigned int pkru)
 }
 
 static inline unsigned int pkru
-rdpkru(void)
+test_rdpkru(void)
 {
   unsigned int eax = 0;
   unsigned int ecx = 0;
@@ -80,7 +80,7 @@ main(void)
    /*
     * Allocate a protection key:
     */
-  unsigned int test = rdpkru();
+  unsigned int test = test_rdpkru();
   printf("test: %d\n", test);
   //pkey = pkey_alloc();
   // if (pkey == -1)
