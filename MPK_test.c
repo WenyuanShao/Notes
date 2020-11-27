@@ -15,7 +15,7 @@ wrpkru(unsigned int pkru)
                 : : "a" (eax), "c" (ecx), "d" (edx));
 }
 
-static inline unsigned int pkru
+static inline unsigned int
 test_rdpkru(void)
 {
   unsigned int eax = 0;
