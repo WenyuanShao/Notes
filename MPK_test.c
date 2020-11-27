@@ -22,7 +22,7 @@ test_rdpkru(void)
   unsigned int ecx = 0;
   unsigned int edx = 0;
 
-  asm volatile("rdpkru" : : "=A" (eax) , "c" (ecx) , "d" (edx));
+  asm volatile("rdpkru" : "=a" (eax) : "c" (ecx) , "d" (edx));
 
   return eax;
 }
