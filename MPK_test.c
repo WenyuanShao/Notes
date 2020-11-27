@@ -52,10 +52,10 @@ pkey_free(unsigned long pkey)
 {
    return syscall(SYS_pkey_free, pkey);
 }
-
+*/
 #define errExit(msg)    do { perror(msg); exit(EXIT_FAILURE); \
                           } while (0)
-*/
+
 int
 main(void)
 {
