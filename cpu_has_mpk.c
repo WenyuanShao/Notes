@@ -29,11 +29,11 @@ static inline int cpu_has_pku(void)
 	__cpuid(&eax, &ebx, &ecx, &edx);
 
 	if (!(ecx & X86_FEATURE_PKU)) {
-		printf2("cpu does not have PKU\n");
+		printf("cpu does not have PKU\n");
 		return 0;
 	}
 	if (!(ecx & X86_FEATURE_OSPKE)) {
-		printf2("cpu does not have OSPKE\n");
+		printf("cpu does not have OSPKE\n");
 		return 0;
 	}
 	return 1;
