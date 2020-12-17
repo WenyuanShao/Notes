@@ -15,9 +15,9 @@
 
 2. Goto server machine and run `./arp.sh`
 
-   Then run `dhclient -v` and `scp -r wenyuan@[server_ipaddr]:~/Linux_ben .` (Replace the existing one).
+   Then run `dhclient -v` and `scp -r wenyuan@[server_ipaddr]:~/Linux_ben .` Need to run on client machine (?)(Replace the existing one).
 
-   Then reboot client (avoid any dhcp related affect to the result)
+   Then reboot client (avoid any dhcp related affect to the result) (how to reboot client machine correctly?)
 
    Run `./arp.sh` again. 
 
