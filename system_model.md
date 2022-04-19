@@ -12,7 +12,11 @@ Besides, Packet P<sub>n</sub> will reach the computation stage S<sup>t</sup> <su
 We also denote the beginning and end of the execution of stage S<sup>t</sup> <sub>ij</sub> for the packet P<sub>n</sub> as s<sub>n</sub><sup>t</sup> and e<sub>n</sub> <sup>t</sup>.
 Note that e<sub>n</sub> <sup>t</sup> - s<sub>n</sub> <sup>t</sup> is the actual execution time of S<sup>t</sup> <sub>ij</sub>.
 This paper makes no assumptions on the worst case execution time of any computations.
-There will be delays between P<sub>n</sub> arrives and execution starts (Δ<sub>R</sub>) as well as execution ends and message sent out (Δ<sub>T</sub>).
+There will be delays between P<sub>n</sub> arrives and execution starts (Δ<sub>head</sub>) as well as execution ends and message sent out (Δ<sub>tail</sub>).
+Δ<sub>head</sub> contains batching delay Δ<sub>batch</sub> and scheduling delay Δ<sub>sched</sub>.
+Δ<sub>s</sub> is the transaction delay.
+Δ<sub>copy</sub> = R<sub>n</sub><sup>t</sup> - T<sub>n</sub><sup>t-1</sup> is used to denote the packet copy delay.
+We are talking about constant size of packets (<=1024 Bytes), thus Δ<sub>copy</sub> is constant and can be ignored.
 We can denote the end-to-end latency of packet P<sub>n</sub> as L<sub>n</sub>, L<sub>n</sub> equals T<sub>n</sub> <sup>k</sup> - R<sub>n</sub> <sup>0</sup>.
 The Packet P<sub>n</sub> meets its deadline means L<sub>n</sub> <= D<sub>n</sub>.
 
