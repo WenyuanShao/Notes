@@ -7,8 +7,8 @@ Additionally, the edge cloud should provide isolated execution for each client s
 Packet P<sub>n</sub> is the nth packet from client c requesting application A<sub>ij</sub>.
 It has a relative deadline D<sub>ij</sub>.
 P<sub>n</sub> reaches the edge cloud at R<sub>n</sub><sup>0</sup>, P<sub>n</sub> will be copied to S<sup>1</sup> <sub>ij</sub> at T<sub>n</sub><sup>0</sup>. 
-Besides, Packet P<sub>n</sub> will reach S<sup>t<sup> <sub>ij</sub> at R<sub>n</sub><sup>t<sup> and leave at T<sub>n</sub> <sup>t</sup>.
-We also denote the beginning and end of the execution of stage S<sup>t<sup> <sub>ij<sub> for the packet P<sub>n</sub> as s<sub>n</sub><sup>t</sup> and e<sub>n</sub> <sup>t</sup>.
+Besides, Packet P<sub>n</sub> will reach S<sup>t</sup> <sub>ij</sub> at R<sub>n</sub><sup>t</sup> and leave at T<sub>n</sub> <sup>t</sup>.
+We also denote the beginning and end of the execution of stage S<sup>t</sup> <sub>ij</sub> for the packet P<sub>n</sub> as s<sub>n</sub><sup>t</sup> and e<sub>n</sub> <sup>t</sup>.
 Note that e<sub>n</sub> <sup>t</sup> - s<sub>n</sub> <sup>t</sup> is the actual execution time of S<sup>t</sup> <sub>ij</sub>.
 This paper makes no assumptions on the worst case execution time of any computations.
 We can denote the end-to-end latency of packet P<sub>n</sub> as L<sub>n</sub>, L<sub>n</sub> equals T<sub>n</sub> <sup>k</sup> - R<sub>n</sub> <sup>0</sup>.
