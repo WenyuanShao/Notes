@@ -12,7 +12,7 @@ Besides, Packet P<sub>n</sub> will reach the computation stage S<sup>t</sup> <su
 We also denote the beginning and end of the execution of stage S<sup>t</sup> <sub>ij</sub> for the packet P<sub>n</sub> as s<sub>n</sub><sup>t</sup> and e<sub>n</sub> <sup>t</sup>.
 Note that e<sub>n</sub> <sup>t</sup> - s<sub>n</sub> <sup>t</sup> is the actual execution time of S<sup>t</sup> <sub>ij</sub>.
 This paper makes no assumptions on the worst case execution time of any computations.
-There will be delays between P<sub>n</sub> arrives and execution starts (&#916 <sub>R</sub>) as well as execution ends and message sent out (&#916 <sub>T</sub>).
+There will be delays between P<sub>n</sub> arrives and execution starts (Δ<sub>R</sub>) as well as execution ends and message sent out (Δ<sub>T</sub>).
 We can denote the end-to-end latency of packet P<sub>n</sub> as L<sub>n</sub>, L<sub>n</sub> equals T<sub>n</sub> <sup>k</sup> - R<sub>n</sub> <sup>0</sup>.
 The Packet P<sub>n</sub> meets its deadline means L<sub>n</sub> <= D<sub>n</sub>.
 
