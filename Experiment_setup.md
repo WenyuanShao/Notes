@@ -8,12 +8,12 @@ We use iDrac which is a separate power control firmware of Dell's server to rebo
 
 ### Detailed server information
 
-+ Client info:
++ Server info:
   + IP address: 161.253.78.154
   + iDrac address: 161.253.78.152
   + iDrac user name: root 
   + iDrac password: F99RNPW4KRNX
-+ Server info:
++ Client info:
   + IP address: 161.253.78.153
   + iDrac address: 161.253.78.151
   + iDrac user name: root 
