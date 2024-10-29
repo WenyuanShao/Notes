@@ -69,17 +69,22 @@ This microbenchmark proves our implementation of \name\ is sufficient and signif
 \begin{table}[h]
     \centering
 	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|
-		        @{\hspace{2pt}}c@{\hspace{2pt}}|
-			@{\hspace{2pt}}c@{\hspace{2pt}}|
-			@{\hspace{2pt}}c@{\hspace{2pt}}|
-			@{\hspace{2pt}}c@{\hspace{2pt}}}
+		        @{\hspace{1pt}}c@{\hspace{1pt}}|
+			@{\hspace{1pt}}c@{\hspace{1pt}}|
+			@{\hspace{1pt}}c@{\hspace{1pt}}|
+			@{\hspace{1pt}}c@{\hspace{1pt}}}
         \hline
-		& \cos & \name & Linux & SeL4 \\ \hline
-		IPC & 1129 & 385 & & \\ \hline
-	    Dispatch &2226(\textit{2708})\textbf{2726}&718(\textit{866})\textbf{897}&1720(\textit{1858})\textbf{14185}&806(\textit{1193})\textbf{1202}\\ \hline
+		& \name & \cos & Linux & SeL4 \\ \hline
+		IPC & 1408(\textit{416})\textbf{496} & 1129(\textit{1226})\textbf{1235} & 8741(\textit{9379})\textbf{218480} & 1273{*}\\ \hline
+		Dispatch & 718(\textit{866})\textbf{897} & 2226(\textit{2708})\textbf{2726} & 1720(\textit{1858})\textbf{14185} & 806(\textit{1193})\textbf{1202}\\ \hline
     \end{tabular}
-    \caption{\small Microbenchmarks study the round-trip latencies of synchronous invocations with different system configurations.}
-    \label{tab:micro_sinv}
+	\caption{\small Microbenchmarks study the round-trip latencies of inter-process communication and thread dispatch.
+	We uses {\tt pipe()} as Linux equivalent of IPC.
+	All results are in cycles.
+	We organize the results as average(\textit{99th percentile})\textbf{Maximum} .
+	We only show average IPC round-trip latency results of SeL4 (marked with {*}), since there's not direct equivalent for round-trip IPCin SeL4.
+	Detailed results of SeL4 are in Figure~\ref{tbl:l4ipc}.}
+    \label{tbl:microben}
 \end{table}
 
 %Table~\ref{tbl:eval_micro} contains the latency of the core control operations in \name.
@@ -143,23 +148,27 @@ For each thread dispatch, protected dispatch needs to switch to the user-level k
 
 \begin{table}[h]
     \centering
-	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|c|c|c}
+	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|
+		        @{\hspace{3pt}}c@{\hspace{3pt}}|c|c}
         \hline
 	    System Configuration & Average & 99\%tile & Max \\ \hline
-	    SeL4 round-trip & 1273 & {*} & {*} \\ 
-	    \textit{SeL4\_Call{*}} & \textit{636} & \textit{640} & \textit{641} \\
-	    \textit{SeL4\_ReplyRecv{*}} & \textit{637} & \textit{640} & \textit{641} \\ \hline
-	    \name\ single addr space, fast dispatch & 1078 & 1087 & 1102 \\
-	    \name\ single addr space, protected dispatch & 1780 & 2163 & 3042 \\
-	    \name\ separate addr spaces & 4484 & 5435 & 5968 \\
-	    \name\ split addr spaces, fast dispatch & 3680 & 3766 & 4284 \\ \hline
+	    SeL4 Round-Trip & 1273 & {*} & {*} \\ 
+	    \textit{SeL4\_Call} & \textit{636} & \textit{640} & \textit{641} \\
+	    \textit{SeL4\_ReplyRecv} & \textit{637} & \textit{640} & \textit{641} \\ \hline
+	    \name\ Single Addr Space, Fast Dispatch & 1078 & 1087 & 1102 \\
+	    \name\ Single Addr Space, Protected Dispatch & 1780 & 2163 & 3042 \\
+	    \name\ Separate Addr Spaces & 4484 & 5435 & 5968 \\
+	    \name\ Split Addr Spaces, Fast Dispatch & 3680 & 3766 & 4284 \\ \hline
     \end{tabular}
-	\caption{\small Latency of L4-style IPC comparing SeL4 against \name\ with different configuration.
-	Config 1: three components use single address space.
-	Config 2: three components use separate address space.
-	Config 3: client and server split from the scheduler. All results are in cycles. 
-	SeL4 results marked with the label {*} represent one-way latencies, while the latency results for \name\ are measuring round-trip latencies.}
-    \label{tab:micro_sinv}
+	\caption{\small Round-trip latency of L4-style IPC comparing SeL4 against \name\ with different configuration.
+	Config 1: three components use single address space and fast thread dispatch.
+	Config 2: three components use single address space and protected dispatch.
+	Config 3: three components use separate address space.
+	Config 4: client and server split from the scheduler.
+	All results are in cycles.
+	SeL4 doesn't have a direct equivalent of round-trip IPC, thus we only show average latency which is the sum of the average latency {\tt SeL4\_call} and {\tt SeL4\_ReplyRecv}.}
+	%%SeL4 results marked with the label {*} represent one-way latencies, while the latency results for \name\ are measuring round-trip latencies.}
+    \label{tbl:l4ipc}
 \end{table}
 
 \head{Patina}
@@ -188,15 +197,16 @@ Both semaphore and mutex have a lower-priority lock holder activates higher-prio
 	\begin{tabular}{l|c|c|c|c|c|c|c|c|c} \hline
 		& \multicolumn{3}{c|}{\cos} & \multicolumn{3}{c|}{\name} & \multicolumn{3}{c}{Linux}\\
 			  & Average & 99\% tail & Max & Average & 99\% tail & Max & Average & 99\% tail & Max\\ \hline
-		Channel Between Threads & 8526 & 8955 & 9033 & 3604 & 3884 & 3913 & & & \\
-		Channel Between Components & 5663 & 5787 & 9460 & 1330 & 1353 & 7090 &  & & \\ \hline
-		Event latency & 3685 & 3757 & 7289 & 1411 & 1428 & 4682 & {*} & {*} & {*} \\ \hline
-		Semaphore Uncontended & 97 & 118 & 1369 & 95 & 116 & 1607 & 85 & 91 & 7312 \\
+		%%Channel, btw Threads, direct switch & 8526 & 8955 & 9033 & 3604 & 3884 & 3913 & & & \\
+		Channel, Direct Switch & 5663 & 5787 & 9460 & 1330 & 1353 & 7090 & 8741 & 9379 & 218480 \\
+		Channel, Event Management & 9813 & 9996 & 22371 & 3536 & 3652 & 13810 & 10340 & 13026 & 186897 \\ \hline
+		%%Event latency & 3685 & 3757 & 7289 & 1411 & 1428 & 4682 & {*} & {*} & {*} \\ \hline
+		%%Semaphore Uncontended & 97 & 118 & 1369 & 95 & 116 & 1607 & 85 & 91 & 7312 \\
 		Semaphore Contended & 5704 & 5771 & 9806 & 2640 & 2678 & 6369 & 6158 & 6364 & 11855 \\ \hline
-		Mutex Uncontended & 116 & 121 & 1245 & 117 & 120 & 1433 & 79 & 85 & 315 \\
+		%%Mutex Uncontended & 116 & 121 & 1245 & 117 & 120 & 1433 & 79 & 85 & 315 \\
 		Mutex Contended & 5628 & 5688 & 8507 & 2789 & 2842 & 4839 & 6592 & 6810 & 13356 \\ \hline
         \end{tabular}
-	\caption{\small Patina overheads in Cycles in \name\ and \cos .}
+	\caption{\small Patina Overheads in Cycles in \name\ and \cos\ with equivalent Linux operations.}
     \label{tbl:patina}
 \end{table*}
 
