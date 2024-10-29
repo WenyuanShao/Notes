@@ -1,0 +1,330 @@
+In this section, we assess \name 's system overhead and performance while running real-world applications.
+In practicular, in our evaluation, we
+\begin{inparaenum}[(1)]
+\item leverage micorbenchmarks to evaluate our implementation of \name .
+\item assess the extensibility of \name\ by comparing with SeL4 on SeL4 style IPC and the baseline \cos\ on Patina benchmarks.
+\item demonstrate the performance of \name\ by runinng real-world Memcached and compare its performance with \cos\ and Linux.
+\end{inparaenum}
+
+All experiments are running on a Cincoze Dx1200 embedded system equipped with Intel 12th Gen Alder Lake-S i7 CPU with 12 cores in total.
+It has an Intel .. 10GbE NIC for networking.
+We use a client machine with Intel(R) Core(TM) i7-14700F CPU and .. NIC to drive the workload generation.
+The Linux results are running on kernel verison ...
+During Memecached evaluation, the client machine uses a modified {\tt mcblaster} open-loop workload generator to generate and measure throughput and round-trip latency.
+\name\ uses DPDK version 22.03.0-rc0 and Memcached version 1.4.39.
+Linux compare case uses Memcahced version ...
+
+\subsection{Microbenchmarks}
+\label{ss:eval_micro}
+
+%%Efficient intra-process isolation and IPC enables designing systems with heightened isolation properties.
+%%Correspondingly, much research has been done into
+%%\begin{inparaenum}[(1)]
+%%\item new kernel mechanisms,
+%%\item novel hardware approaches for user-level IPC, and
+%%\item systems that use existing hardware mechanisms (mainly MPK and {\tt VMFUNC}).
+%%\end{inparaenum}
+% Table~\ref{tbl:approaches} depicts many of these approaches, separated into these three classes.
+
+%%The major contribution of \name\ is providing a new control-plane abstraction which focuses on latency while still maintaining strong isolation.
+%%\name\ achieve that by leverage existing hardware mechanisms by integrating them into the core OS abstractions.
+%%Their use is hidden behind a general abstraction for component creation, and IPC end-point creation.
+%%Component's access rights, defined by a capability-based access-control model, are the same if page-tables or MPK is used for isolation.
+%%Our hope is that future hardware mechanisms can integrate into the system behind this API.
+
+%%\begin{figure}
+%%  \includegraphics[width=\columnwidth]{example_systems.png}
+%%  \caption{Example context table that we might reproduce from the Donkey work. Obviously we can't use this in the final.}
+%%  \label{tbl:eval_micro}
+%%\end{figure}
+%%\note{Wenyuan: this table is a place holder for now. We need to remake the table and adding Janus and Composite results in it.}
+
+%%\begin{table}[h]
+%%	\footnotesize
+%%	\centering
+%%	\begin{tabular}{|l{0.25\textwidth}|l{0.25\textwidth}|}
+%%		\hline
+%%Scheme & Avg latency (cycles) \\ 
+%%		\hline
+%%	\end{tabular}
+%%\end{table}
+Table~\ref{table:micro_sinv} shows the latency of our implementation of the core control operations in \name\ with different configuration comparing to \cos .
+This microbenchmark uses a ping-pong test to benchmark the round-trip latency of synchronous invcations of the corresponding system setup.
+We benchmark 4 different system configurations:
+\begin{inparaenum}[(1)]
+\item baseline \cos\ which handles IPCs and thread dispatches through the kernel.
+\item \name\ with kernel thread dispatch which leverages hardware features for fast IPC while still needs to go through kernel for thread dispatch.
+\item \name\ with protected dispatch which allows user-level thread dispatch with scb and dcb isolated in the user-level kernel.
+\item \name\ with user-level thread dispatch without having the user-level kernel protecting scb and dcb.
+\end{inparaenum}
+
+\head{Discussion.}
+As shown in Table~\ref{table:micro_sinv} , for a round-trip of an IPC, our implementationof \name\ has a much lower latency compare to \cos .
+\cos\ is nearly 3 times slower.
+On the other hand, thread dispacthes has minor impact on the latency.
+Since there is few thread dispatches happening in this microbenchmarks, only when time interrupt fires.
+However, protected dispatch does introduce some overheads, because each protected thread dispatch requires two protection domain switches to set and retrieve values from scb and dcb which are stored in the user-level kernel protection domain.
+This microbenchmark proves our implementation of \name\ is sufficient and significantly reduce IPC and thread-dispatch overheads.
+
+\begin{table}[h]
+    \centering
+	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|
+		        @{\hspace{2pt}}c@{\hspace{2pt}}|
+			@{\hspace{2pt}}c@{\hspace{2pt}}|
+			@{\hspace{2pt}}c@{\hspace{2pt}}|
+			@{\hspace{2pt}}c@{\hspace{2pt}}}
+        \hline
+		& \cos & \name & Linux & SeL4 \\ \hline
+		IPC & 1129 & 385 & & \\ \hline
+	    Dispatch &2226(\textit{2708})\textbf{2726}&718(\textit{866})\textbf{897}&1720(\textit{1858})\textbf{14185}&806(\textit{1193})\textbf{1202}\\ \hline
+    \end{tabular}
+    \caption{\small Microbenchmarks study the round-trip latencies of synchronous invocations with different system configurations.}
+    \label{tab:micro_sinv}
+\end{table}
+
+%Table~\ref{tbl:eval_micro} contains the latency of the core control operations in \name.
+
+\subsection{Configurable Control Mechanisms and Policies}
+\label{ss:eval_config}
+%%\note{Wenyuan: In this subsection we show results comparing SeL4 style IPC with Janus and Composite.
+%%If we have Patina results, it should be in this subsection.}
+
+\name\ enables the user-level definition of system control policies.
+By avoiding kernel interactions on the fast-path, even performance sensitive systems can leverage increased spatial and temporal isolation.
+To demonstrate the system's ability to customize core control policies and mechanisms, we implement L4-style synchronous IPC between threads, custom scheduling policies, and port Patnia benchmarks.
+
+\head{L4-style IPC} (``l4-IPC henceforth) has a benefit over our thread-migration-based IPC that a server can be implemented with a single thread that receives requests from separate client threads.
+Single-threaded component logic can be more amenable to approaches to gain confidence in the code such as verification.
+
+L4-IPC is based on
+\begin{inparaenum}[(1)]
+\item threads synchronously rendezvousing to conduct IPC;
+\item a {\tt call} and {\tt reply\_and\_wait} API that enable IPC to be done with a single client, and a single server call;
+\item and a fast-path that assumes that the server thread is blocked awaiting a client {\tt call}, the system can direct switch between threads, and the scheduling logic can be bypassed (by updating at some later point).
+\end{inparaenum}
+We've implemented an extension to the scheduler component that integrates L4-IPC facilities and optimizations into the system.
+It requires synchronous invocations to the scheduler component (\eg\ to invoke {\tt call}), and dispatching between threads in the scheduler.
+Thus, our L4-IPC extension uses the \name\ facilities for control to add a new control abstraction.
+
+Table~\ref{tbl:eval_ipc} depicts the IPC overhead to call from the client component's thread, through the scheduler component, to the server component.
+%Round-trip IPC overhead (client to server, to client) includes two thread-migration synchronous invocations to the scheduler, one each from the client and server, and two thread dispatches (client thread to server, and back).
+We show this latency with three different protection domain configurations:
+\begin{inparaenum}[(1)]
+\item Config1: all three components use separate address spaces, thus each has a separate page-table for isolation,
+\item Config2: all components share the same address space, thus use \name's support for kernel-bypass IPC and dispatch, and
+\item Config3: the client and server each split from the scheduler, thus enabling kernel-bypass IPC, but requiring dispatch between address spaces.
+\end{inparaenum}
+We compare against seL4's~\cite{sel4} fast-path IPC.
+%We show RPC over Linux pipes (both intra- and inter-core), and \name\ overheads for the various configurations of IPC for context.
+%We also show the costs for the {\tt go} language runtime to RPC between goroutines using channels, and the costs of invoking a C function from {\tt go}.
+
+%The core for enabling configurable scheduling policies is to enable a scheduling component to have the capabilities to threads so it can dispatch them, and to provide a plugin infrastructure for policies.
+%We've implemented a library that includes the \name-specific code, and scheduling and timer management policies are modular behind defined APIs.
+
+%Table~\ref{tbl:eval_sched} depicts the latencies for scheduling operations in \name.
+%We include the raw costs of dispatching, and the costs of a separate, isolated client component invoking the scheduler to switch threads.
+%We compare to the costs of Linux scheduling use {\tt sched\_yield}, and to the Ghost scheduler that also provides configurable scheduling by exporting policy to user-level.
+%We also show the costs of the {\tt go} language runtime to yield between user-level threads (using {\tt runtime.Gosched()}).
+
+\head{Discussion.}
+According to Table~\ref{tbl:micro_sinv}, \name\ Config 2 which has scheduler, client and server share the same virtual address space, has the best average round-trip latency.
+It is 169 cycles (around 15\%) faster than the most optimized IPC path in SeL4 (SeL4\_Call and SeL4\_ReplyRecv).
+However, for tail latency, \name\ is 33 cycles slower than the fast path of SeL4 because of the overhead of corrdinations between kernel and user-level on the current activate thread and component.
+Additionally, while both using fast-path thread dispatch, due to the overhead of switching protection domains through kernel, Config 1 is significantly slower than Config 2 which directly switches protection domains in user-level.
+Finally, when looking at the results of Config2 each using different dispatch configurations, kernel thread dispatch doubled both average and tail latency because of the two thread switches during the IPC.
+That also result in overhead with portected dispatch.
+For each thread dispatch, protected dispatch needs to switch to the user-level kernel twice to save and retrieve information in scb and dcb.
+
+%%The efficient control facilities of \name\ enable more elaborate policies to be layered on top.
+%%We've demonstrated that the core efficiency of kernel-bypass control enables the creation of policies that are faster than those in even highly optimized existing systems that rely on more traditional, kernel-mediated operations.
+%%The {\tt go} user-level runtime provides user-level scheduling and synchronization primitives.
+%%Despite this, \name's overheads are close to {\tt go}s.
+%%Calling a C function from {\tt go} requires locks and bookkeeping to enable the M-to-N scheduling to work should the call block.
+
+\begin{table}[h]
+    \centering
+	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|c|c|c}
+        \hline
+	    System Configuration & Average & 99\%tile & Max \\ \hline
+	    SeL4 round-trip & 1273 & {*} & {*} \\ 
+	    \textit{SeL4\_Call{*}} & \textit{636} & \textit{640} & \textit{641} \\
+	    \textit{SeL4\_ReplyRecv{*}} & \textit{637} & \textit{640} & \textit{641} \\ \hline
+	    \name\ single addr space, fast dispatch & 1078 & 1087 & 1102 \\
+	    \name\ single addr space, protected dispatch & 1780 & 2163 & 3042 \\
+	    \name\ separate addr spaces & 4484 & 5435 & 5968 \\
+	    \name\ split addr spaces, fast dispatch & 3680 & 3766 & 4284 \\ \hline
+    \end{tabular}
+	\caption{\small Latency of L4-style IPC comparing SeL4 against \name\ with different configuration.
+	Config 1: three components use single address space.
+	Config 2: three components use separate address space.
+	Config 3: client and server split from the scheduler. All results are in cycles. 
+	SeL4 results marked with the label {*} represent one-way latencies, while the latency results for \name\ are measuring round-trip latencies.}
+    \label{tab:micro_sinv}
+\end{table}
+
+\head{Patina}
+It is common for real-time and embedded systems to avoid complex APIs such as POSIX for applicaitons like networking.
+But these systems often require basic interfaces including threads, message passing, event management, and synchronization.
+With \name\ transparently replaces control-plane operations and focuses on the security properties.
+\name\ can significantly reduce overheads for those basic interfaces.
+%With \name\ transparently replaces control-plane operations, \name\ still focusing on security properties.
+%Additionally, \name\ significantly reduces overhead regarding control-plane operations, practicularly in protection domain switches and thread dispatch.
+%Empowered by these two factors, \name\ delivers both efficiency and predictability benefiting a wide range of real-time operating system functionalities.
+To further evaluate \name\ across broader latency- and security-sensitive functionalities.
+We port Patina~\cite{patina} which provides predictable interfaces include communication channels, event management, and synchronization to Janus.
+The evaluation regarding to Patina between \name\ and \cos\ includes
+\begin{inparaenum}[(1)]
+\item channel communication between two threads in one component and two thread in two different components and rely on interrupts for notifications,
+\item event management between two threads,
+\item uncontened and contented semaphore,
+\item uncontened and contented mutex.
+\end{inparaenum}
+Both semaphore and mutex have a lower-priority lock holder activates higher-priority contenter.
+
+%%Since the design and implementation of Patina is security-centric thus requires strong isolation, having \name\ replacing system control polices can significantly reduce overheads of Patina APIs.
+
+\begin{table*}[h]
+    \centering
+	\begin{tabular}{l|c|c|c|c|c|c|c|c|c} \hline
+		& \multicolumn{3}{c|}{\cos} & \multicolumn{3}{c|}{\name} & \multicolumn{3}{c}{Linux}\\
+			  & Average & 99\% tail & Max & Average & 99\% tail & Max & Average & 99\% tail & Max\\ \hline
+		Channel Between Threads & 8526 & 8955 & 9033 & 3604 & 3884 & 3913 & & & \\
+		Channel Between Components & 5663 & 5787 & 9460 & 1330 & 1353 & 7090 &  & & \\ \hline
+		Event latency & 3685 & 3757 & 7289 & 1411 & 1428 & 4682 & {*} & {*} & {*} \\ \hline
+		Semaphore Uncontended & 97 & 118 & 1369 & 95 & 116 & 1607 & 85 & 91 & 7312 \\
+		Semaphore Contended & 5704 & 5771 & 9806 & 2640 & 2678 & 6369 & 6158 & 6364 & 11855 \\ \hline
+		Mutex Uncontended & 116 & 121 & 1245 & 117 & 120 & 1433 & 79 & 85 & 315 \\
+		Mutex Contended & 5628 & 5688 & 8507 & 2789 & 2842 & 4839 & 6592 & 6810 & 13356 \\ \hline
+        \end{tabular}
+	\caption{\small Patina overheads in Cycles in \name\ and \cos .}
+    \label{tbl:patina}
+\end{table*}
+
+\head{Discussion.}
+According to Table~\ref{tbl:patina}, \name\ improves both average and tail latencies on channel communication (signle components and between components), event management, contented semaphore by over 50\%.
+Since all test components and the scheduler are running in the same address space in \name\, these tests can benefit from both kernel-bypass IPC and thread dispatching.
+\name\ improves contended mutex performance by approximately 3000 cycles, achieving similar improvements as with contended semaphores.
+This is because both mechanisms involve the same number of IPCs and thread dispatches.
+Uncontended mutex and semaphore comparison between \name\ and \cos\ demonstrate that the implementation of \name\ addes minor overheads of the synchronous policies.
+
+%\subsection{Side-stepping Hardware Limitations}
+%\label{ss:eval_hw_limitations}
+
+%Hardware protection domains are often limited the number available.
+%For example, MPK enables only 15 keys to be used in a page-table, and is limited by the number of free bits in page-table entries.
+%ASIDs (on Intel: PCIDs) are limited to being represented by 10 bits \note{EVAN: is this accurate?}, but hardware is often significantly  more limited in how many are concurrently tracked~\cite{ASIDs}.
+%ASIDs consume bits in each TLB entry, so there is incentive to physically track a smaller number of concurrent ASIDs; in many cases only four~\cite{ASIDs}.
+
+%\name's interface for protection domain creation and manipulation enables components to use a combination of page-table (with associated ASIDs) and MPK based protection domains.
+%This practically enables many more protection domains that are IPC-fastpath accessible, and to ``compress'' many components into a limited number of ASID-associated page-tables.
+
+%Figure~\ref{fig:hw_limitations} shows the overhead for the following workload:
+%A component accesses enough pages (in a random pattern) to fill XXX\% of the TLB.
+%Then it makes an invocation into a number of components are arranged in a chain.
+%The x-axis shows the number of components in that chain, thus the number of ASIDs used.
+%We plot two cases:
+%\begin{inparaenum}[(1)]
+%\item a case where the components are each given separate page-tables, thus separate ASIDs, and
+%\item a case where components are allocated into shared virtual address spaces until they cannot (i.e. they run out of keys and \inlinedccode{vas_namespace_name_available} returns \inlinedccode{false}), and only then are they allocated into a separate address space.
+%\end{inparaenum}
+
+%We can see that when more than \note{XXX} components are in an invocation chain, the TLB is effectively flushed.
+%This demonstrates that the unpublished CPU implementation limits the number of {\em effectively} ASIDs.
+%In contrast, we can see that our component allocation using a mixture of MPK and page-table protection domains maintains TLB contents.
+
+%\head{Discussion.}
+%Despite the limitations in practical ASID tracking, and MPK key namespace size, this test demonstrates that with small changes in component creation routines, alleviate these hardware limitations.
+%We do so by simulating a much larger number of ASIDs by using MPK-based protection domains (that all share the same ASID in a page-table), and by having a number of components that efficiently communicate that is much than the number of MPK keys available by relying on the (hopefully rarely used) optimized kernel invocation paths.
+%From the system's perspective there is little difference between these two setups.
+%Components can be allocated into a shared virtual address space, or a separate one (using the API in~\ref{ss:api}).
+%Thus, the system components that create components are able to optimize system construction to ameliorate such fixed hardware limitations.
+%\name\ ensures that components are protected consistently, regardless the hardware protection mechanism.
+
+\subsection{Memcached}
+\label{ss:memcached}
+In this subsection, we evaluate \name\ and compare against baseline \cos\ and Linux to demonstrate the performance of \name\ on real-world applicaitons.
+%We evaluated the potential of \name to reduce system overhead in real-world network applications, specifically focusing on Memcached.
+We deploy a well-known in memory key-value store Memcached as a componet above \name\ with tenant and scheduler component sharing the same address space.
+Additionally, to prevent malicious access, Memcached, tenants computation, network I/O and scheudler are isolated within separate protection domains.
+Consequently, each tenant must perform synchronous invocations to transmit and receive packets via the NIC, as well as to execute Memcached operations.
+With \name\ replacing control-plane operations, Memcached application over \name\ can benefit from both kernel-bypass IPC and user-level thread dispatch.
+We run in total 7 tenants across 8 cores with one specilized core devoted for packet receiving and demultiplexing.
+
+We setup \cos\ and Linux as compare cases against \name\. 
+%We first compare Janus against Composite and Linux, using a single Memcached instance with one tenant per core.
+The \cos\ compare case uses the same configuration as \name , but instead of sharing the same address sapce, \cos\ has each component execute is separate address spaces thus separate pagetables.
+We configure Linux in ways:
+\begin{inparaenum}[(1)]
+\item running memcached server with 7 threads across 8 cores which is a close replica of \name 's setup, and
+\item running 7 separate memcached server instances, each with 1 thread to avoids contention and demultiplexing.
+\end{inparaenum}
+The clients generate a 90\% get, 10\% set workload with a 16-byte key and 135-byte value. 
+Figure~\ref{fig:memcached_latency_set} and Figure~\ref{fig:mem_8_latency_get} shows the 99\% tail latency of set and get requests as the number of packets sent by the workload generator per second increases.
+Figure~\ref{fig:memcached_goodput} depicts how the good put changes as we increasing the client sending rate.
+
+\begin{figure*}[t]
+    \centering
+    \begin{minipage}[b]{0.32\textwidth}
+        \includegraphics[width=\textwidth]{figures/mem_8_throughput}
+        \caption{Goodput Comparison}
+	\label{fig:memcached_goodput}
+    \end{minipage}
+    \begin{minipage}[b]{0.32\textwidth}
+        \includegraphics[width=\textwidth]{figures/mem_8_latency_set}
+        \caption{99\% latency of set requests}
+	\label{fig:memcached_latency_set}
+    \end{minipage}
+    \begin{minipage}[b]{0.32\textwidth}
+        \includegraphics[width=\textwidth]{figures/mem_8_latency_get}
+        \caption{99\% latency of get requests}
+	\label{fig:memcached_latency_get}
+    \end{minipage}
+\end{figure*}
+
+\head{Discussion.}
+According to Figure~\ref{fig:memcached_goodput}, \cos\ achieves goodput around 8.1 million while \name\ can achieve over 10.7 million packets.
+This result indicts \name\ has significantly less system overheads than \cos .
+The effect of less overhead also can be interperted from the tail latency result, in which \cos\ starts to getting overloaded when the per client sending rate equals 100K packet per-second, but \name\ works fine until the per client sending rate is greater than 150K packets per-second.
+Additionally, when the system is overloaded, the tail latency of \cos\ is around 4 miliseconds and the tail latency of \name\ is around 3 miliseconds.
+This is because when the system is overloaded, the pervious un processed packets will quickly fill-up the receive queue of the tenants.
+Therefore, the tail latency when overloaded is boudned by the size of the tenant receive queue.
+Since \name 's tenant can leverage kernel-bypass mechanisms, \name\ introduce less system overhead which leads to \name\ has smaller tail latency than \cos\ when system is overloaded.
+Without the cost of mutex contentions in Memcached and demultiplexing client workloads, Linux with separated memcached instance can only achieve upto 4.6 million total goodput, which is around 46\% of \name , mainly due to message passing, especially transmitting. \note{Why?...}
+With shared memcached instance, the goodput of Linux drops to around 22 million, this mainly due to the cost of demultiplexing.
+The 99\% tail latency of both Linux setups reaches their peak and starts to drop as we increasing the sending rate of the clients.
+This is because as we increasing the client sending rate, more packets are drop in the hardware due to the back-pressure from the application. \note{I am not sure, we need to talk about it.}
+
+\head{Multi-tenant.}
+Instead of making one get or set request per packet, real-world applications often require services which require aggregation of multiple keys.
+We emulate this by allowing tenants making multiple calls to the Memcached per client request.
+On the Linux side, we implement tenants each bind to a specific server port and foward received packets to the Memcached server using sockets.
+Each teant executes in separate processes, thus achieve page table based isolation between tenants.
+
+\note{
+Potential graphs for the paper
+\begin{itemize}
+\item Throughput (90\% GET/10\% SET): x = sending rate, y = goodput, Lines: Janus, Cos, Linux (shared memcached), Linux (not shared memcached)
+  \begin{itemize}
+  \item Explanatory experiment (not for plotting): {\em shared} memcached throughput with increasing \# of cores.
+  \item Big question: why doesn't memcached scale for Linux? Is it a networking issue, or is it the locking? If it is locking, why don't {\em we} have the same issue? If it is networking, how?
+  \end{itemize}
+\item Tail latency (get) (99th, or 99.9, or... look at related work):, x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+  \begin{itemize}
+  \item Option 2 if we want to show the latency spectrum: CDF of latency at a specific throughput or 2 different throughputs
+  \end{itemize}
+\item Tail latency (set) (99th, or 99.9, or... look at related work):, x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+\item Latency (get), x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+\item Latency (set), x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+\item Multi-tenant aggregation across multiple keys
+  \begin{itemize}
+  \item Parameter study on the amount of aggregation: x = \# of memcached requests per single client request, y = throughput, Lines: Linux/s, Linux/ns, Janus, Cos
+    \begin{itemize}
+    \item Questions: what send rate do we use here???
+    \item Problem: the send rate where Linux is interesting is different than for the other systems.
+    \item Maybe: y = 99th, x = goodput, dots = send rates
+    \end{itemize}
+  \item Throughput (as above)
+  \item Latency {\em or} tail (as above)
+  \end{itemize}
+\end{itemize}
+}
