@@ -1,4 +1,4 @@
-In this section, we assess \name 's system overhead and performance while running real-world applications.
+In this section, we evaluate the system level overhead and performance on real-world applications of \name\ and compare \name\ to other existing works.
 In practicular, in our evaluation, we
 \begin{inparaenum}[(1)]
 \item leverage micorbenchmarks to evaluate our implementation of \name .
@@ -6,16 +6,38 @@ In practicular, in our evaluation, we
 \item demonstrate the performance of \name\ by runinng real-world Memcached and compare its performance with \cos\ and Linux.
 \end{inparaenum}
 
-All experiments are running on a Cincoze Dx1200 embedded system equipped with Intel 12th Gen Alder Lake-S i7 CPU with 12 cores in total.
-It has an Intel .. 10GbE NIC for networking.
-We use a client machine with Intel(R) Core(TM) i7-14700F CPU and .. NIC to drive the workload generation.
-The Linux results are running on kernel verison ...
-During Memecached evaluation, the client machine uses a modified {\tt mcblaster} open-loop workload generator to generate and measure throughput and round-trip latency.
+All experiments are running on a Cincoze Dx1200 embedded system equipped with Intel(R) 12th Gen Alder Lake-S i9-12900TE CPU with 8 performance core s and 8 efficient cores.
+We use 8 performance cores (1.1 GHz) for the evaluations.
+The embedded system equipped with an Intel X550T 10GbE NIC for networking.
+We use a client machine with Intel(R) Core(TM) i7-14700F CPU and .. NIC to drive the workload generation, thus client will not the the bottle neck of the evaluation.
+The Linux evaluations are running on kernel verison 6.8.0-47-generic.
+In Memecached evaluations, the client machine uses a modified {\tt mcblaster} open-loop workload generator to generate and measure throughput and round-trip latency.
 \name\ uses DPDK version 22.03.0-rc0 and Memcached version 1.4.39.
-Linux compare case uses Memcahced version ...
+Linux compare cases use Memcahced server version 1.6.14.
 
 \subsection{Microbenchmarks}
 \label{ss:eval_micro}
+
+\begin{table}[t]
+    \centering
+	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|
+		        @{\hspace{1pt}}c@{\hspace{1pt}}|
+			@{\hspace{1pt}}c@{\hspace{1pt}}|
+			@{\hspace{2pt}}c@{\hspace{2pt}}|
+			@{\hspace{1pt}}c@{\hspace{1pt}}}
+        \hline
+		& \name & \cos & Linux & SeL4 \\ \hline
+		IPC & 408(\textit{416})\textbf{496} & 1129(\textit{1226})\textbf{1235} & 8741(\textit{9379})\textbf{218480} & 1273{*}\\ \hline
+		Dispatch & 718(\textit{866})\textbf{897} & 2226(\textit{2708})\textbf{2726} & 1720(\textit{1858})\textbf{14185} & 806(\textit{1193})\textbf{1202}\\ \hline
+    \end{tabular}
+	\caption{\small Microbenchmarks study the round-trip latencies of inter-process communication and thread dispatch.
+	We uses {\tt pipe()} as Linux equivalent of IPC.
+	All results are in cycles.
+	We organize the results as average(\textit{99th percentile})\textbf{Maximum} .
+	We only show average IPC round-trip latency results of SeL4 (marked with {*}), since there's not direct equivalent for round-trip IPC in SeL4.
+	Detailed results of SeL4 are in Figure~\ref{tbl:l4ipc}.}
+    \label{tbl:microben}
+\end{table}
 
 %%Efficient intra-process isolation and IPC enables designing systems with heightened isolation properties.
 %%Correspondingly, much research has been done into
@@ -48,44 +70,36 @@ Linux compare case uses Memcahced version ...
 %%		\hline
 %%	\end{tabular}
 %%\end{table}
-Table~\ref{table:micro_sinv} shows the latency of our implementation of the core control operations in \name\ with different configuration comparing to \cos .
-This microbenchmark uses a ping-pong test to benchmark the round-trip latency of synchronous invcations of the corresponding system setup.
-We benchmark 4 different system configurations:
-\begin{inparaenum}[(1)]
-\item baseline \cos\ which handles IPCs and thread dispatches through the kernel.
-\item \name\ with kernel thread dispatch which leverages hardware features for fast IPC while still needs to go through kernel for thread dispatch.
-\item \name\ with protected dispatch which allows user-level thread dispatch with scb and dcb isolated in the user-level kernel.
-\item \name\ with user-level thread dispatch without having the user-level kernel protecting scb and dcb.
-\end{inparaenum}
+%%Table~\ref{table:micro_sinv} shows the latency of our implementation of the core control operations in \name\ with different configuration comparing to \cos .
+%%To understand the system-level overhead of \name , we 
+%%This microbenchmark uses a ping-pong test to benchmark the round-trip latency of synchronous invcations of the corresponding system setup.
+%%We benchmark 4 different system configurations:
+%%\begin{inparaenum}[(1)]
+%%\item baseline \cos\ which handles IPCs and thread dispatches through the kernel.
+%%\item \name\ with kernel thread dispatch which leverages hardware features for fast IPC while still needs to go through kernel for thread dispatch.
+%%\item \name\ with protected dispatch which allows user-level thread dispatch with scb and dcb isolated in the user-level kernel.
+%%\item \name\ with user-level thread dispatch without having the user-level kernel protecting scb and dcb.
+%%\end{inparaenum}
+It is critical to understand the optimizations \name\ made on system-level operations.
+Therefore we first evaluate the IPC and thread dispatching overhead of \name\ compared to other operating systems including \cos, Linux and SeL4.
+We use {\tt pipe()} as Linux equivalent of inter-process communication.
+To evaluate the overhead of thread dispatching, we measure the latency of one thread yielding to another.
 
 \head{Discussion.}
-As shown in Table~\ref{table:micro_sinv} , for a round-trip of an IPC, our implementationof \name\ has a much lower latency compare to \cos .
-\cos\ is nearly 3 times slower.
-On the other hand, thread dispacthes has minor impact on the latency.
-Since there is few thread dispatches happening in this microbenchmarks, only when time interrupt fires.
-However, protected dispatch does introduce some overheads, because each protected thread dispatch requires two protection domain switches to set and retrieve values from scb and dcb which are stored in the user-level kernel protection domain.
-This microbenchmark proves our implementation of \name\ is sufficient and significantly reduce IPC and thread-dispatch overheads.
+As shown in Table~\ref{tbl:microben}, our implementation of \name\ achieves the best round-trip latency for IPC across all metrics among the four systems due to kernel by-passing.
+\cos\ and SeL4 has similar latency for IPC, but nearly 3 times slower than \name .
+Section~\ref{ss:eval_config} provides a detialed analysis of the latency of L4-style IPC.
+Linux {\pipes} are significantly slow than the other systems.
+On the other hand, thread dispacthes \name\ shows similar optimizations on thread dispatching.
+SeL4 has a slightly large average thread dispatching time, but has a relative large tail and maximum latency.
+\cos\ is over 1400 cycles slower than SeL4.
+This is because in both \name\ and \cos , the scheduler is in a separate protection domain, thus, a thread needs to make a synchronous invocation call to the scheduler then yield to another thread.
+As a result, the dispatching latency of both \cos\ and \name\ include cost of a one-way IPC.
+%Since there is few thread dispatches happening in this microbenchmarks, only when time interrupt fires.
+%However, protected dispatch does introduce some overheads, because each protected thread dispatch requires two protection domain switches to set and retrieve values from scb and dcb which are stored in the user-level kernel protection domain.
 
-\begin{table}[h]
-    \centering
-	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|
-		        @{\hspace{1pt}}c@{\hspace{1pt}}|
-			@{\hspace{1pt}}c@{\hspace{1pt}}|
-			@{\hspace{1pt}}c@{\hspace{1pt}}|
-			@{\hspace{1pt}}c@{\hspace{1pt}}}
-        \hline
-		& \name & \cos & Linux & SeL4 \\ \hline
-		IPC & 1408(\textit{416})\textbf{496} & 1129(\textit{1226})\textbf{1235} & 8741(\textit{9379})\textbf{218480} & 1273{*}\\ \hline
-		Dispatch & 718(\textit{866})\textbf{897} & 2226(\textit{2708})\textbf{2726} & 1720(\textit{1858})\textbf{14185} & 806(\textit{1193})\textbf{1202}\\ \hline
-    \end{tabular}
-	\caption{\small Microbenchmarks study the round-trip latencies of inter-process communication and thread dispatch.
-	We uses {\tt pipe()} as Linux equivalent of IPC.
-	All results are in cycles.
-	We organize the results as average(\textit{99th percentile})\textbf{Maximum} .
-	We only show average IPC round-trip latency results of SeL4 (marked with {*}), since there's not direct equivalent for round-trip IPCin SeL4.
-	Detailed results of SeL4 are in Figure~\ref{tbl:l4ipc}.}
-    \label{tbl:microben}
-\end{table}
+In conclusion, the results of IPC and thread dispatching proves our implementation of \name\ is sufficient.
+Kernel-bypassing significantly reduces IPC and thread dispatching overheads.
 
 %Table~\ref{tbl:eval_micro} contains the latency of the core control operations in \name.
 
@@ -96,7 +110,7 @@ This microbenchmark proves our implementation of \name\ is sufficient and signif
 
 \name\ enables the user-level definition of system control policies.
 By avoiding kernel interactions on the fast-path, even performance sensitive systems can leverage increased spatial and temporal isolation.
-To demonstrate the system's ability to customize core control policies and mechanisms, we implement L4-style synchronous IPC between threads, custom scheduling policies, and port Patnia benchmarks.
+To demonstrate the system's ability to customize core control policies and mechanisms, we implement L4-style synchronous IPC between threads and port Patnia benchmarks.
 
 \head{L4-style IPC} (``l4-IPC henceforth) has a benefit over our thread-migration-based IPC that a server can be implemented with a single thread that receives requests from separate client threads.
 Single-threaded component logic can be more amenable to approaches to gain confidence in the code such as verification.
@@ -104,20 +118,21 @@ Single-threaded component logic can be more amenable to approaches to gain confi
 L4-IPC is based on
 \begin{inparaenum}[(1)]
 \item threads synchronously rendezvousing to conduct IPC;
-\item a {\tt call} and {\tt reply\_and\_wait} API that enable IPC to be done with a single client, and a single server call;
-\item and a fast-path that assumes that the server thread is blocked awaiting a client {\tt call}, the system can direct switch between threads, and the scheduling logic can be bypassed (by updating at some later point).
+\item a {\tt SeL4\_Call} and {\tt SeL4\_ReplyRecv} API that enable IPC to be done with a single client, and a single server call;
+\item and a fast-path that assumes that the server thread is blocked awaiting a client {\tt SeL4\_Call}, the system can direct switch between threads, and the scheduling logic can be bypassed (by updating at some later point).
 \end{inparaenum}
 We've implemented an extension to the scheduler component that integrates L4-IPC facilities and optimizations into the system.
-It requires synchronous invocations to the scheduler component (\eg\ to invoke {\tt call}), and dispatching between threads in the scheduler.
+It requires synchronous invocations to the scheduler component (\eg\ to invoke {\tt SeL4\_Call}), and dispatching between threads in the scheduler.
 Thus, our L4-IPC extension uses the \name\ facilities for control to add a new control abstraction.
 
 Table~\ref{tbl:eval_ipc} depicts the IPC overhead to call from the client component's thread, through the scheduler component, to the server component.
 %Round-trip IPC overhead (client to server, to client) includes two thread-migration synchronous invocations to the scheduler, one each from the client and server, and two thread dispatches (client thread to server, and back).
-We show this latency with three different protection domain configurations:
+We show the round-trip latency of L4-IPC on \name\ with four different protection domain configurations:
 \begin{inparaenum}[(1)]
-\item Config1: all three components use separate address spaces, thus each has a separate page-table for isolation,
-\item Config2: all components share the same address space, thus use \name's support for kernel-bypass IPC and dispatch, and
-\item Config3: the client and server each split from the scheduler, thus enabling kernel-bypass IPC, but requiring dispatch between address spaces.
+\item Config1: all components share the same address space, thus use \name's support for kernel-bypass IPC, with fast dispatch,
+\item Config2: the same as Config1, but using protected dispatch,
+\item Config3: all three components use separate address spaces, thus each has a separate page-table for isolation,
+\item Config4: the client and server each split from the scheduler, thus enabling kernel-bypass IPC, but requiring dispatch between address spaces.
 \end{inparaenum}
 We compare against seL4's~\cite{sel4} fast-path IPC.
 %We show RPC over Linux pipes (both intra- and inter-core), and \name\ overheads for the various configurations of IPC for context.
@@ -132,13 +147,21 @@ We compare against seL4's~\cite{sel4} fast-path IPC.
 %We also show the costs of the {\tt go} language runtime to yield between user-level threads (using {\tt runtime.Gosched()}).
 
 \head{Discussion.}
-According to Table~\ref{tbl:micro_sinv}, \name\ Config 2 which has scheduler, client and server share the same virtual address space, has the best average round-trip latency.
-It is 169 cycles (around 15\%) faster than the most optimized IPC path in SeL4 (SeL4\_Call and SeL4\_ReplyRecv).
-However, for tail latency, \name\ is 33 cycles slower than the fast path of SeL4 because of the overhead of corrdinations between kernel and user-level on the current activate thread and component.
-Additionally, while both using fast-path thread dispatch, due to the overhead of switching protection domains through kernel, Config 1 is significantly slower than Config 2 which directly switches protection domains in user-level.
-Finally, when looking at the results of Config2 each using different dispatch configurations, kernel thread dispatch doubled both average and tail latency because of the two thread switches during the IPC.
-That also result in overhead with portected dispatch.
-For each thread dispatch, protected dispatch needs to switch to the user-level kernel twice to save and retrieve information in scb and dcb.
+According to Table~\ref{tbl:micro_sinv}, with scheduler, client and server sharing the same virtual address space and using fast dispatch, \name\ has the best round-trip latency.
+It is 169 cycles (around 15\%) faster than the average IPC latency in SeL4.
+Note that there is no equivalent of round-trip IPC in SeL4 benchmark, thus we only show the average IPC latency which equals the sum of the average latency of {\tt SeL4\_Call} and {\tt SeL4\_ReplyRecv}.
+Though providing additional isolation in kernel-bypassing thread dispatching, protected dispatch introduces addition overhead.
+In L4-IPC, using protected dispatch leads to in average around 700 cycles of additional overhead.
+%%However, for tail latency, \name\ is 33 cycles slower than the fast path of SeL4 because of the overhead of corrdinations between kernel and user-level on the current activate thread and component.
+%%Additionally, while both using fast-path thread dispatch, due to the overhead of switching protection domains through kernel, Config 1 is significantly slower than Config 2 which directly switches protection domains in user-level.
+%%Finally, when looking at the results of Config2 each using different dispatch configurations, kernel thread dispatch doubled both average and tail latency because of the two thread switches during the IPC.
+%%That also result in overhead with portected dispatch.
+%%For each thread dispatch, protected dispatch needs to switch to the user-level kernel twice to save and retrieve information in scb and dcb.
+While using separate address spaces for all three testing components, we have to make IPC and thread dispatch all through kernel.
+Thus, causes significant slow down (over 4000 cycles).
+Finally, the comparison between single address space and split address spaces demonstrate the performance differences between using dispatch through kernel and kernel-bypassing thread dispatches.
+L4-IPC using fast dispatch reduces the latency by over 70\% .
+Also, despite the additional overhead, protected dispatch is still over 2000 cycles faster than kernel dispatch.
 
 %%The efficient control facilities of \name\ enable more elaborate policies to be layered on top.
 %%We've demonstrated that the core efficiency of kernel-bypass control enables the creation of policies that are faster than those in even highly optimized existing systems that rely on more traditional, kernel-mediated operations.
@@ -153,8 +176,8 @@ For each thread dispatch, protected dispatch needs to switch to the user-level k
         \hline
 	    System Configuration & Average & 99\%tile & Max \\ \hline
 	    SeL4 Round-Trip & 1273 & {*} & {*} \\ 
-	    \textit{SeL4\_Call} & \textit{636} & \textit{640} & \textit{641} \\
-	    \textit{SeL4\_ReplyRecv} & \textit{637} & \textit{640} & \textit{641} \\ \hline
+	    \phantom{Indent}\textit{SeL4\_Call} & \textit{636} & \textit{640} & \textit{641} \\
+	    \phantom{Indent}\textit{SeL4\_ReplyRecv} & \textit{637} & \textit{640} & \textit{641} \\ \hline
 	    \name\ Single Addr Space, Fast Dispatch & 1078 & 1087 & 1102 \\
 	    \name\ Single Addr Space, Protected Dispatch & 1780 & 2163 & 3042 \\
 	    \name\ Separate Addr Spaces & 4484 & 5435 & 5968 \\
@@ -163,10 +186,10 @@ For each thread dispatch, protected dispatch needs to switch to the user-level k
 	\caption{\small Round-trip latency of L4-style IPC comparing SeL4 against \name\ with different configuration.
 	Config 1: three components use single address space and fast thread dispatch.
 	Config 2: three components use single address space and protected dispatch.
-	Config 3: three components use separate address space.
+	Config 3: three components use separate address spaces.
 	Config 4: client and server split from the scheduler.
 	All results are in cycles.
-	SeL4 doesn't have a direct equivalent of round-trip IPC, thus we only show average latency which is the sum of the average latency {\tt SeL4\_call} and {\tt SeL4\_ReplyRecv}.}
+	SeL4 doesn't have a direct equivalent of round-trip IPC, thus we only show average latency which is the sum of the average latency of {\tt SeL4\_call} and {\tt SeL4\_ReplyRecv}.}
 	%%SeL4 results marked with the label {*} represent one-way latencies, while the latency results for \name\ are measuring round-trip latencies.}
     \label{tbl:l4ipc}
 \end{table}
@@ -176,17 +199,21 @@ It is common for real-time and embedded systems to avoid complex APIs such as PO
 But these systems often require basic interfaces including threads, message passing, event management, and synchronization.
 With \name\ transparently replaces control-plane operations and focuses on the security properties.
 \name\ can significantly reduce overheads for those basic interfaces.
+Therefore, allowing real-time and embedded system avoiding complex APIs while maintaining strong isolation and lower latency.
 %With \name\ transparently replaces control-plane operations, \name\ still focusing on security properties.
 %Additionally, \name\ significantly reduces overhead regarding control-plane operations, practicularly in protection domain switches and thread dispatch.
 %Empowered by these two factors, \name\ delivers both efficiency and predictability benefiting a wide range of real-time operating system functionalities.
-To further evaluate \name\ across broader latency- and security-sensitive functionalities.
-We port Patina~\cite{patina} which provides predictable interfaces include communication channels, event management, and synchronization to Janus.
-The evaluation regarding to Patina between \name\ and \cos\ includes
+
+To evaluate \name\ across broader latency- and security-sensitive functionalities.
+We port Patina~\cite{patina} which provides predictable interfaces include communication channels, event management, and synchronization to \name .
+We evaluate \name\ and compare \name\ with \cos\ and Linux across multiple interfaces including: 
 \begin{inparaenum}[(1)]
-\item channel communication between two threads in one component and two thread in two different components and rely on interrupts for notifications,
-\item event management between two threads,
-\item uncontened and contented semaphore,
-\item uncontened and contented mutex.
+\item Channel communication directly between two threads across address spaces.
+	In Linux we evaluate both sockets and pipes and decide to use pipes due to less overhead.
+\item Channel communication between two threads across address spaces with event manager notifying threads when new events been triggered.
+	The Linux comparison case uses {\tt epoll} to await the event.
+\item Contented semaphore.
+\item Contented mutex.
 \end{inparaenum}
 Both semaphore and mutex have a lower-priority lock holder activates higher-priority contenter.
 
@@ -206,16 +233,29 @@ Both semaphore and mutex have a lower-priority lock holder activates higher-prio
 		%%Mutex Uncontended & 116 & 121 & 1245 & 117 & 120 & 1433 & 79 & 85 & 315 \\
 		Mutex Contended & 5628 & 5688 & 8507 & 2789 & 2842 & 4839 & 6592 & 6810 & 13356 \\ \hline
         \end{tabular}
-	\caption{\small Patina Overheads in Cycles in \name\ and \cos\ with equivalent Linux operations.}
+	\caption{\small Patina Overheads in Cycles of \name\ and \cos\ with equivalent Linux operations.}
     \label{tbl:patina}
 \end{table*}
 
 \head{Discussion.}
-According to Table~\ref{tbl:patina}, \name\ improves both average and tail latencies on channel communication (signle components and between components), event management, contented semaphore by over 50\%.
-Since all test components and the scheduler are running in the same address space in \name\, these tests can benefit from both kernel-bypass IPC and thread dispatching.
-\name\ improves contended mutex performance by approximately 3000 cycles, achieving similar improvements as with contended semaphores.
-This is because both mechanisms involve the same number of IPCs and thread dispatches.
-Uncontended mutex and semaphore comparison between \name\ and \cos\ demonstrate that the implementation of \name\ addes minor overheads of the synchronous policies.
+According to Table~\ref{tbl:patina}, while comparing to the baseline \cos , \name\ significantly reduces latency across all metrics for channel comunication with (from over 9000 cycles to ~3500 cycles) or without (from over 5000 cycles to ~1300 cycles) event management.
+Such improvement \name 's ability to reduce overheads for operations require involvement of multiple threads across different protection domains.
+Linux pipes are nearly 7 times slower than \name\ which shows that \name\ with Patina is competitive against existing operating systems.
+For synchronizations including mutex and semaphore, \cos\ is around 10\% better than the Linux equivalent.
+But with kernel-bypassing support of \name , the average and 99th percentile tail latency are reduced to around 40\%.
+We also evaluate alternative approaches for user-level policy configurations, including those that rely on language runtimes such as {\tt Go}.
+However, such approaches are not fully configurable since the language runtime is running on top of operating systems.
+Additionally, \name\ has lower costs than user defined policies in language runtime.
+For example, the costs for the {\tt Go} language runtime to RPC between goroutines using channels, .
+
+The evaluation of Patina across \cos , \name , Linux and channel communication of {\tt Go} runtime demonstrate that \name 's ability of reduce latency on user defined system control policies.
+
+
+%%According to Table~\ref{tbl:patina}, \name\ improves both average and tail latencies on channel communication (with and without the event manager), event management, contented semaphore and mutex by over 50\%.
+%%Since all test components and the scheduler are running in the same address space in \name\, these tests can benefit from both kernel-bypass IPC and thread dispatching.
+%\name\ improves contended mutex performance by approximately 3000 cycles, achieving similar improvements as with contended semaphores.
+%This is because both mechanisms involve the same number of IPCs and thread dispatches.
+%%Uncontended mutex and semaphore comparison between \name\ and \cos\ demonstrate that the implementation of \name\ addes minor overheads of the synchronous policies.
 
 %\subsection{Side-stepping Hardware Limitations}
 %\label{ss:eval_hw_limitations}
@@ -274,20 +314,15 @@ Figure~\ref{fig:memcached_goodput} depicts how the good put changes as we increa
 
 \begin{figure*}[t]
     \centering
-    \begin{minipage}[b]{0.32\textwidth}
+    \begin{minipage}[b]{0.45\textwidth}
         \includegraphics[width=\textwidth]{figures/mem_8_throughput}
         \caption{Goodput Comparison}
-	\label{fig:memcached_goodput}
-    \end{minipage}
-    \begin{minipage}[b]{0.32\textwidth}
-        \includegraphics[width=\textwidth]{figures/mem_8_latency_set}
-        \caption{99\% latency of set requests}
 	\label{fig:memcached_latency_set}
     \end{minipage}
-    \begin{minipage}[b]{0.32\textwidth}
-        \includegraphics[width=\textwidth]{figures/mem_8_latency_get}
-        \caption{99\% latency of get requests}
-	\label{fig:memcached_latency_get}
+    \begin{minipage}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figures/mem_8_latency_set}
+        \caption{99th Percentile Latency of Requests}
+	\label{fig:memcached_latency_set}
     \end{minipage}
 \end{figure*}
 
