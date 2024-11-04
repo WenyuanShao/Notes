@@ -89,17 +89,18 @@ To evaluate the overhead of thread dispatching, we measure the latency of one th
 As shown in Table~\ref{tbl:microben}, our implementation of \name\ achieves the best round-trip latency for IPC across all metrics among the four systems due to kernel by-passing.
 \cos\ and SeL4 has similar latency for IPC, but nearly 3 times slower than \name .
 Section~\ref{ss:eval_config} provides a detialed analysis of the latency of L4-style IPC.
-Linux {\pipes} are significantly slow than the other systems.
-On the other hand, thread dispacthes \name\ shows similar optimizations on thread dispatching.
-SeL4 has a slightly large average thread dispatching time, but has a relative large tail and maximum latency.
-\cos\ is over 1400 cycles slower than SeL4.
-This is because in both \name\ and \cos , the scheduler is in a separate protection domain, thus, a thread needs to make a synchronous invocation call to the scheduler then yield to another thread.
+Linux {\pipes} are significantly slower than the other systems.
+According to the experiments, the average cost of {\tt getpid()} is 298 cycles, indicating that \name\ reduces the cost of an IPC to the level of a system call.
+On the other hand, \name\ shows similar optimizations on thread dispatching.
+The thread dispatching average latency of SeL4 is 100 cycles larger than \name , but over 1400 cycles smaller than \cos .
+This is because in both \name\ and \cos , the scheduler is in a separate protection domain.
+Thus a thread needs to make a synchronous invocation call to the scheduler then yield to another thread.
 As a result, the dispatching latency of both \cos\ and \name\ include cost of a one-way IPC.
 %Since there is few thread dispatches happening in this microbenchmarks, only when time interrupt fires.
 %However, protected dispatch does introduce some overheads, because each protected thread dispatch requires two protection domain switches to set and retrieve values from scb and dcb which are stored in the user-level kernel protection domain.
 
 In conclusion, the results of IPC and thread dispatching proves our implementation of \name\ is sufficient.
-Kernel-bypassing significantly reduces IPC and thread dispatching overheads.
+Kernel-bypassing significantly reduces IPC and thread dispatching latencies.
 
 %Table~\ref{tbl:eval_micro} contains the latency of the core control operations in \name.
 
@@ -114,6 +115,31 @@ To demonstrate the system's ability to customize core control policies and mecha
 
 \head{L4-style IPC} (``l4-IPC henceforth) has a benefit over our thread-migration-based IPC that a server can be implemented with a single thread that receives requests from separate client threads.
 Single-threaded component logic can be more amenable to approaches to gain confidence in the code such as verification.
+
+\begin{table}[h]
+    \centering
+	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|
+		        @{\hspace{3pt}}c@{\hspace{3pt}}|c|c}
+        \hline
+	    System Configuration & Average & 99\%tile & Max \\ \hline
+	    SeL4 Round-Trip & 1273 & {*} & {*} \\ 
+	    \phantom{Indent}\textit{SeL4\_Call} & \textit{636} & \textit{640} & \textit{641} \\
+	    \phantom{Indent}\textit{SeL4\_ReplyRecv} & \textit{637} & \textit{640} & \textit{641} \\ \hline
+	    \name\ Single Addr Space, Fast Dispatch & 1078 & 1087 & 1102 \\
+	    \name\ Single Addr Space, Protected Dispatch & 1780 & 2163 & 3042 \\
+	    \name\ Separate Addr Spaces & 4484 & 5435 & 5968 \\
+	    \name\ Split Addr Spaces, Fast Dispatch & 3680 & 3766 & 4284 \\ \hline
+    \end{tabular}
+	\caption{\small Round-trip latency of L4-style IPC comparing SeL4 against \name\ with different configuration.
+	Config 1: three components use single address space and fast thread dispatch.
+	Config 2: three components use single address space and protected dispatch.
+	Config 3: three components use separate address spaces.
+	Config 4: client and server split from the scheduler.
+	All results are in cycles.
+	SeL4 doesn't have a direct equivalent of round-trip IPC, thus we only show average latency which is the sum of the average latency of {\tt SeL4\_call} and {\tt SeL4\_ReplyRecv}.}
+	%%SeL4 results marked with the label {*} represent one-way latencies, while the latency results for \name\ are measuring round-trip latencies.}
+    \label{tbl:l4ipc}
+\end{table}
 
 L4-IPC is based on
 \begin{inparaenum}[(1)]
@@ -146,8 +172,26 @@ We compare against seL4's~\cite{sel4} fast-path IPC.
 %We compare to the costs of Linux scheduling use {\tt sched\_yield}, and to the Ghost scheduler that also provides configurable scheduling by exporting policy to user-level.
 %We also show the costs of the {\tt go} language runtime to yield between user-level threads (using {\tt runtime.Gosched()}).
 
+\begin{table*}[t]
+    \centering
+	\begin{tabular}{l|c|c|c|c|c|c|c|c|c} \hline
+		& \multicolumn{3}{c|}{\cos} & \multicolumn{3}{c|}{\name} & \multicolumn{3}{c}{Linux}\\
+			  & Average & 99\% tail & Max & Average & 99\% tail & Max & Average & 99\% tail & Max\\ \hline
+		%%Channel, btw Threads, direct switch & 8526 & 8955 & 9033 & 3604 & 3884 & 3913 & & & \\
+		Channel, Direct Switch & 5663 & 5787 & 9460 & 1330 & 1353 & 7090 & 8741 & 9379 & 218480 \\
+		Channel, Event Management & 9813 & 9996 & 22371 & 3536 & 3652 & 13810 & 10340 & 13026 & 186897 \\ \hline
+		%%Event latency & 3685 & 3757 & 7289 & 1411 & 1428 & 4682 & {*} & {*} & {*} \\ \hline
+		%%Semaphore Uncontended & 97 & 118 & 1369 & 95 & 116 & 1607 & 85 & 91 & 7312 \\
+		Semaphore Contended & 5704 & 5771 & 9806 & 2640 & 2678 & 6369 & 6158 & 6364 & 11855 \\ \hline
+		%%Mutex Uncontended & 116 & 121 & 1245 & 117 & 120 & 1433 & 79 & 85 & 315 \\
+		Mutex Contended & 5628 & 5688 & 8507 & 2789 & 2842 & 4839 & 6592 & 6810 & 13356 \\ \hline
+        \end{tabular}
+	\caption{\small Patina Overheads in Cycles of \name\ and \cos\ with equivalent Linux operations.}
+    \label{tbl:patina}
+\end{table*}
+
 \head{Discussion.}
-According to Table~\ref{tbl:micro_sinv}, with scheduler, client and server sharing the same virtual address space and using fast dispatch, \name\ has the best round-trip latency.
+According to Table~\ref{tbl:microben}, with scheduler, client and server sharing the same virtual address space and using fast dispatch, \name\ has the best round-trip latency.
 It is 169 cycles (around 15\%) faster than the average IPC latency in SeL4.
 Note that there is no equivalent of round-trip IPC in SeL4 benchmark, thus we only show the average IPC latency which equals the sum of the average latency of {\tt SeL4\_Call} and {\tt SeL4\_ReplyRecv}.
 Though providing additional isolation in kernel-bypassing thread dispatching, protected dispatch introduces addition overhead.
@@ -168,31 +212,6 @@ Also, despite the additional overhead, protected dispatch is still over 2000 cyc
 %%The {\tt go} user-level runtime provides user-level scheduling and synchronization primitives.
 %%Despite this, \name's overheads are close to {\tt go}s.
 %%Calling a C function from {\tt go} requires locks and bookkeeping to enable the M-to-N scheduling to work should the call block.
-
-\begin{table}[h]
-    \centering
-	\begin{tabular}{@{\hspace{2pt}}l@{\hspace{2pt}}|
-		        @{\hspace{3pt}}c@{\hspace{3pt}}|c|c}
-        \hline
-	    System Configuration & Average & 99\%tile & Max \\ \hline
-	    SeL4 Round-Trip & 1273 & {*} & {*} \\ 
-	    \phantom{Indent}\textit{SeL4\_Call} & \textit{636} & \textit{640} & \textit{641} \\
-	    \phantom{Indent}\textit{SeL4\_ReplyRecv} & \textit{637} & \textit{640} & \textit{641} \\ \hline
-	    \name\ Single Addr Space, Fast Dispatch & 1078 & 1087 & 1102 \\
-	    \name\ Single Addr Space, Protected Dispatch & 1780 & 2163 & 3042 \\
-	    \name\ Separate Addr Spaces & 4484 & 5435 & 5968 \\
-	    \name\ Split Addr Spaces, Fast Dispatch & 3680 & 3766 & 4284 \\ \hline
-    \end{tabular}
-	\caption{\small Round-trip latency of L4-style IPC comparing SeL4 against \name\ with different configuration.
-	Config 1: three components use single address space and fast thread dispatch.
-	Config 2: three components use single address space and protected dispatch.
-	Config 3: three components use separate address spaces.
-	Config 4: client and server split from the scheduler.
-	All results are in cycles.
-	SeL4 doesn't have a direct equivalent of round-trip IPC, thus we only show average latency which is the sum of the average latency of {\tt SeL4\_call} and {\tt SeL4\_ReplyRecv}.}
-	%%SeL4 results marked with the label {*} represent one-way latencies, while the latency results for \name\ are measuring round-trip latencies.}
-    \label{tbl:l4ipc}
-\end{table}
 
 \head{Patina}
 It is common for real-time and embedded systems to avoid complex APIs such as POSIX for applicaitons like networking.
@@ -219,23 +238,6 @@ Both semaphore and mutex have a lower-priority lock holder activates higher-prio
 
 %%Since the design and implementation of Patina is security-centric thus requires strong isolation, having \name\ replacing system control polices can significantly reduce overheads of Patina APIs.
 
-\begin{table*}[h]
-    \centering
-	\begin{tabular}{l|c|c|c|c|c|c|c|c|c} \hline
-		& \multicolumn{3}{c|}{\cos} & \multicolumn{3}{c|}{\name} & \multicolumn{3}{c}{Linux}\\
-			  & Average & 99\% tail & Max & Average & 99\% tail & Max & Average & 99\% tail & Max\\ \hline
-		%%Channel, btw Threads, direct switch & 8526 & 8955 & 9033 & 3604 & 3884 & 3913 & & & \\
-		Channel, Direct Switch & 5663 & 5787 & 9460 & 1330 & 1353 & 7090 & 8741 & 9379 & 218480 \\
-		Channel, Event Management & 9813 & 9996 & 22371 & 3536 & 3652 & 13810 & 10340 & 13026 & 186897 \\ \hline
-		%%Event latency & 3685 & 3757 & 7289 & 1411 & 1428 & 4682 & {*} & {*} & {*} \\ \hline
-		%%Semaphore Uncontended & 97 & 118 & 1369 & 95 & 116 & 1607 & 85 & 91 & 7312 \\
-		Semaphore Contended & 5704 & 5771 & 9806 & 2640 & 2678 & 6369 & 6158 & 6364 & 11855 \\ \hline
-		%%Mutex Uncontended & 116 & 121 & 1245 & 117 & 120 & 1433 & 79 & 85 & 315 \\
-		Mutex Contended & 5628 & 5688 & 8507 & 2789 & 2842 & 4839 & 6592 & 6810 & 13356 \\ \hline
-        \end{tabular}
-	\caption{\small Patina Overheads in Cycles of \name\ and \cos\ with equivalent Linux operations.}
-    \label{tbl:patina}
-\end{table*}
 
 \head{Discussion.}
 According to Table~\ref{tbl:patina}, while comparing to the baseline \cos , \name\ significantly reduces latency across all metrics for channel comunication with (from over 9000 cycles to ~3500 cycles) or without (from over 5000 cycles to ~1300 cycles) event management.
@@ -243,12 +245,15 @@ Such improvement \name 's ability to reduce overheads for operations require inv
 Linux pipes are nearly 7 times slower than \name\ which shows that \name\ with Patina is competitive against existing operating systems.
 For synchronizations including mutex and semaphore, \cos\ is around 10\% better than the Linux equivalent.
 But with kernel-bypassing support of \name , the average and 99th percentile tail latency are reduced to around 40\%.
+
 We also evaluate alternative approaches for user-level policy configurations, including those that rely on language runtimes such as {\tt Go}.
 However, such approaches are not fully configurable since the language runtime is running on top of operating systems.
 Additionally, \name\ has lower costs than user defined policies in language runtime.
-For example, the costs for the {\tt Go} language runtime to RPC between goroutines using channels, .
+For example, the cost for the {\tt Go} language runtime to RPC between goroutines using channels is 974.3 ns which equals around 10717 cycles on the 1.1 GHz cpu.
+It is nearly 10 times slower than the channel communication in \name\ with out event management.
 
-The evaluation of Patina across \cos , \name , Linux and channel communication of {\tt Go} runtime demonstrate that \name 's ability of reduce latency on user defined system control policies.
+
+The evaluation of Patina across \cos , \name , Linux and channel communication of {\tt Go} runtime demonstrate \name 's ability of reducing latency on user defined system control policies.
 
 
 %%According to Table~\ref{tbl:patina}, \name\ improves both average and tail latencies on channel communication (with and without the event manager), event management, contented semaphore and mutex by over 50\%.
@@ -290,28 +295,6 @@ The evaluation of Patina across \cos , \name , Linux and channel communication o
 %Thus, the system components that create components are able to optimize system construction to ameliorate such fixed hardware limitations.
 %\name\ ensures that components are protected consistently, regardless the hardware protection mechanism.
 
-\subsection{Memcached}
-\label{ss:memcached}
-In this subsection, we evaluate \name\ and compare against baseline \cos\ and Linux to demonstrate the performance of \name\ on real-world applicaitons.
-%We evaluated the potential of \name to reduce system overhead in real-world network applications, specifically focusing on Memcached.
-We deploy a well-known in memory key-value store Memcached as a componet above \name\ with tenant and scheduler component sharing the same address space.
-Additionally, to prevent malicious access, Memcached, tenants computation, network I/O and scheudler are isolated within separate protection domains.
-Consequently, each tenant must perform synchronous invocations to transmit and receive packets via the NIC, as well as to execute Memcached operations.
-With \name\ replacing control-plane operations, Memcached application over \name\ can benefit from both kernel-bypass IPC and user-level thread dispatch.
-We run in total 7 tenants across 8 cores with one specilized core devoted for packet receiving and demultiplexing.
-
-We setup \cos\ and Linux as compare cases against \name\. 
-%We first compare Janus against Composite and Linux, using a single Memcached instance with one tenant per core.
-The \cos\ compare case uses the same configuration as \name , but instead of sharing the same address sapce, \cos\ has each component execute is separate address spaces thus separate pagetables.
-We configure Linux in ways:
-\begin{inparaenum}[(1)]
-\item running memcached server with 7 threads across 8 cores which is a close replica of \name 's setup, and
-\item running 7 separate memcached server instances, each with 1 thread to avoids contention and demultiplexing.
-\end{inparaenum}
-The clients generate a 90\% get, 10\% set workload with a 16-byte key and 135-byte value. 
-Figure~\ref{fig:memcached_latency_set} and Figure~\ref{fig:mem_8_latency_get} shows the 99\% tail latency of set and get requests as the number of packets sent by the workload generator per second increases.
-Figure~\ref{fig:memcached_goodput} depicts how the good put changes as we increasing the client sending rate.
-
 \begin{figure*}[t]
     \centering
     \begin{minipage}[b]{0.45\textwidth}
@@ -326,50 +309,84 @@ Figure~\ref{fig:memcached_goodput} depicts how the good put changes as we increa
     \end{minipage}
 \end{figure*}
 
+\subsection{Memcached}
+\label{ss:memcached}
+In this subsection, we evaluate \name\ and compare against baseline \cos\ and Linux to demonstrate the performance of \name\ on real-world applicaitons.
+%We evaluated the potential of \name to reduce system overhead in real-world network applications, specifically focusing on Memcached.
+We deploy a well-known in memory key-value store Memcached as a componet above \name\ with tenant, scheduler component and NIC management component.
+Additionally, to prevent malicious access, Memcached, tenants computation, scheudler and network I/O are isolated within separate protection domains.
+Consequently, each tenant must perform synchronous invocations to transmit and receive packets via the NIC, as well as to execute Memcached operations.
+In \name , all four components share the same address space.
+With \name\ replacing control-plane operations, Memcached application over \name\ can benefit from both kernel-bypass IPC and user-level thread dispatch.
+%But for the \cos\ comparison, we rely on pagetbale based isolation and thread dispatching through kernel.
+We run in total 7 tenants across 8 cores with one specilized core devoted for packet receiving and demultiplexing.
+
+We setup \cos\ and Linux as compare cases against \name\. 
+%We first compare Janus against Composite and Linux, using a single Memcached instance with one tenant per core.
+The \cos\ compare case uses the same configuration as \name , but instead of sharing the same address sapce, \cos\ has each component execute is separate address spaces thus relying on pagetables based isolation and thread dispatching through kernel.
+We configure Linux in two different ways:
+\begin{inparaenum}[(1)]
+\item running memcached server with 8 threads across 8 cores which is a close replica of \name 's setup, and
+\item running 7 separate memcached server instances, each with 1 thread to avoids contention and demultiplexing.
+\end{inparaenum}
+The clients generate a 90\% get, 10\% set workload with a 16-byte key and 135-byte value. 
+Figure~\ref{fig:memcached_latency_set} shows the 99\% tail latency of replies as the increase of the number of packets sent by the workload generator per second.
+Figure~\ref{fig:memcached_goodput} depicts the changes of goodput as we increasing the client sending rate.
+
 \head{Discussion.}
-According to Figure~\ref{fig:memcached_goodput}, \cos\ achieves goodput around 8.1 million while \name\ can achieve over 10.7 million packets.
-This result indicts \name\ has significantly less system overheads than \cos .
-The effect of less overhead also can be interperted from the tail latency result, in which \cos\ starts to getting overloaded when the per client sending rate equals 100K packet per-second, but \name\ works fine until the per client sending rate is greater than 150K packets per-second.
-Additionally, when the system is overloaded, the tail latency of \cos\ is around 4 miliseconds and the tail latency of \name\ is around 3 miliseconds.
-This is because when the system is overloaded, the pervious un processed packets will quickly fill-up the receive queue of the tenants.
-Therefore, the tail latency when overloaded is boudned by the size of the tenant receive queue.
-Since \name 's tenant can leverage kernel-bypass mechanisms, \name\ introduce less system overhead which leads to \name\ has smaller tail latency than \cos\ when system is overloaded.
-Without the cost of mutex contentions in Memcached and demultiplexing client workloads, Linux with separated memcached instance can only achieve upto 4.6 million total goodput, which is around 46\% of \name , mainly due to message passing, especially transmitting. \note{Why?...}
-With shared memcached instance, the goodput of Linux drops to around 22 million, this mainly due to the cost of demultiplexing.
-The 99\% tail latency of both Linux setups reaches their peak and starts to drop as we increasing the sending rate of the clients.
-This is because as we increasing the client sending rate, more packets are drop in the hardware due to the back-pressure from the application. \note{I am not sure, we need to talk about it.}
+According to Figure~\ref{fig:memcached_goodput}, \cos\ achieves goodput around 8.1 million while \name\ can achieve over 10.7 million.
+This indicats \name\ has less system overheads than \cos .
+The effect of less overhead also can be interperted from the tail latency result, in which \cos\ starts to getting overloaded when the per client sending rate is greater than 120K packet per second, but \name\ works fine until the per client sending rate is greater than 150K packets per second.
+%%Additionally, when the system is overloaded, the tail latency of \cos\ is around 4 miliseconds and the tail latency of \name\ is around 3 miliseconds.
+%%This is because when the system is overloaded, the pervious un processed packets will quickly fill-up the receive queue of the tenants.
+%%Therefore, the tail latency when overloaded is boudned by the size of the tenant receive queue.
+%%Since \name 's tenant can leverage kernel-bypass mechanisms, \name\ introduce less system overhead which leads to \name\ has smaller tail latency than \cos\ when system is overloaded.
+Without the cost of mutex contentions in Memcached and demultiplexing client workloads, Linux with separated memcached instance can only achieve upto 4.6 million total goodput, which is around 46\% of \name .
+The major overhead is in message passing, especially transmitting, likely casued by contentions over transmit rings and DMA resources.
+With shared memcached instance, the goodput of Linux drops to around 22 million, this mainly due to the cost of demultiplexing and event notifying.
+According to the result from {\tt perf}, over 60\% of the execution time is spend in {\tt epoll}.
+Both Linux configuration has greater 99th percentile latency even when underloaded which is around 200 $\mu$-seconds comparing to around 70 $\mu$-seconds for \cos\ and \name .
+Additionally, Linux with separate memcached instances begins to get overloaded when client sending rate over 50K packets per second, and Linux with shared memcached instance is overloaded when client sending rate greater than 30K.
 
-\head{Multi-tenant.}
-Instead of making one get or set request per packet, real-world applications often require services which require aggregation of multiple keys.
-We emulate this by allowing tenants making multiple calls to the Memcached per client request.
-On the Linux side, we implement tenants each bind to a specific server port and foward received packets to the Memcached server using sockets.
-Each teant executes in separate processes, thus achieve page table based isolation between tenants.
+%%The 99\% tail latency of both Linux setups reaches their peak and starts to drop as we increasing the sending rate of the clients.
+%%This is because as we increasing the client sending rate, more packets are drop in the hardware due to the back-pressure from the application. \note{I am not sure, we need to talk about it.}
 
-\note{
-Potential graphs for the paper
-\begin{itemize}
-\item Throughput (90\% GET/10\% SET): x = sending rate, y = goodput, Lines: Janus, Cos, Linux (shared memcached), Linux (not shared memcached)
-  \begin{itemize}
-  \item Explanatory experiment (not for plotting): {\em shared} memcached throughput with increasing \# of cores.
-  \item Big question: why doesn't memcached scale for Linux? Is it a networking issue, or is it the locking? If it is locking, why don't {\em we} have the same issue? If it is networking, how?
-  \end{itemize}
-\item Tail latency (get) (99th, or 99.9, or... look at related work):, x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
-  \begin{itemize}
-  \item Option 2 if we want to show the latency spectrum: CDF of latency at a specific throughput or 2 different throughputs
-  \end{itemize}
-\item Tail latency (set) (99th, or 99.9, or... look at related work):, x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
-\item Latency (get), x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
-\item Latency (set), x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
-\item Multi-tenant aggregation across multiple keys
-  \begin{itemize}
-  \item Parameter study on the amount of aggregation: x = \# of memcached requests per single client request, y = throughput, Lines: Linux/s, Linux/ns, Janus, Cos
-    \begin{itemize}
-    \item Questions: what send rate do we use here???
-    \item Problem: the send rate where Linux is interesting is different than for the other systems.
-    \item Maybe: y = 99th, x = goodput, dots = send rates
-    \end{itemize}
-  \item Throughput (as above)
-  \item Latency {\em or} tail (as above)
-  \end{itemize}
-\end{itemize}
+\head{Multi-tenant Memcached.}
+Instead of making one get or set request per packet, real-world applications often require services which require aggregation of multiple Memcached operations.
+We emulate this by allowing tenants making multiple calls to the Memcached within a single client request.
+To avoid malicious executions, each tenant must be isolated and having the scheudler making scheduling decisions.
+We already achieve that by having each tenant running in separate componets.
+For the Linux compare case, we implement tenants as processes, each bind to a specific server port and foward received packets to the Memcached server using sockets.
+Thus we achieve pagetable-based isolation between tenants.
+We evaluate the goodput and 99th percentile tail latency of \cos , \name , Linux with shared Memcached instance and Linux with separate Memcached instances as increasing the number of Memecached operations per client request.
+To best demonstrate the results for \cos\ and \name, each client sends 75K requests per second.
+However, to evaluate Linux, each client sends only 15K requests per second, resulting in a total throughput that is reduced to one-fifth.
+
+%%\note{
+%%Potential graphs for the paper
+%%\begin{itemize}
+%%\item Throughput (90\% GET/10\% SET): x = sending rate, y = goodput, Lines: Janus, Cos, Linux (shared memcached), Linux (not shared memcached)
+%%  \begin{itemize}
+%%  \item Explanatory experiment (not for plotting): {\em shared} memcached throughput with increasing \# of cores.
+%%  \item Big question: why doesn't memcached scale for Linux? Is it a networking issue, or is it the locking? If it is locking, why don't {\em we} have the same issue? If it is networking, how?
+%%  \end{itemize}
+%%\item Tail latency (get) (99th, or 99.9, or... look at related work):, x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+%%  \begin{itemize}
+%%  \item Option 2 if we want to show the latency spectrum: CDF of latency at a specific throughput or 2 different throughputs
+%%  \end{itemize}
+%%\item Tail latency (set) (99th, or 99.9, or... look at related work):, x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+%%\item Latency (get), x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+%%\item Latency (set), x = sending rate, y = latency, Lines: Janus, Cos, Linux/s, Linux/ns
+%%\item Multi-tenant aggregation across multiple keys
+%%  \begin{itemize}
+%%  \item Parameter study on the amount of aggregation: x = \# of memcached requests per single client request, y = throughput, Lines: Linux/s, Linux/ns, Janus, Cos
+%%    \begin{itemize}
+%%    \item Questions: what send rate do we use here???
+%%    \item Problem: the send rate where Linux is interesting is different than for the other systems.
+%%    \item Maybe: y = 99th, x = goodput, dots = send rates
+%%    \end{itemize}
+%%  \item Throughput (as above)
+%%  \item Latency {\em or} tail (as above)
+%%  \end{itemize}
+%%\end{itemize}
 }
